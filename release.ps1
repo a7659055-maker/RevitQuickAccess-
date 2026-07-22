@@ -44,6 +44,15 @@ Write-Host "[1/5] Версия $($cur -join '.') -> $new" -ForegroundColor Cyan
 $text = [regex]::Replace($text, '<Version>[^<]*</Version>', "<Version>$new</Version>")
 Set-Content $csproj $text -NoNewline
 
+# установщик показывает свою версию в шапке — держим её в синхроне с плагином
+$inst = Join-Path $root "Installer\RqaInstaller.csproj"
+if (Test-Path $inst) {
+    $it = Get-Content $inst -Raw
+    if ($it -match '<Version>[^<]*</Version>') {
+        Set-Content $inst ([regex]::Replace($it, '<Version>[^<]*</Version>', "<Version>$new</Version>")) -NoNewline
+    }
+}
+
 Write-Host "[2/5] Сборка" -ForegroundColor Cyan
 & (Join-Path $root "build.ps1") -NoCommit
 if ($LASTEXITCODE -ne 0) { throw "Сборка не удалась" }

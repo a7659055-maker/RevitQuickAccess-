@@ -64,7 +64,21 @@ namespace RevitQuickAccess.Browser
             var views = new List<BrowserRow>();
             if (doc == null) return sheets;
 
+            // title block actually placed on each sheet (one pass, then look up per sheet)
+            var tbBySheet = new Dictionary<ElementId, KeyValuePair<ElementId, string>>();
+            foreach (FamilyInstance tb in new FilteredElementCollector(doc)
+                        .OfCategory(BuiltInCategory.OST_TitleBlocks).OfClass(typeof(FamilyInstance)))
+            {
+                var owner = tb.OwnerViewId;
+                if (owner == ElementId.InvalidElementId || tbBySheet.ContainsKey(owner)) continue;
+                var tt = doc.GetElement(tb.GetTypeId());
+                string nm = tt is FamilySymbol fsym ? (fsym.Family?.Name ?? "") + " : " + fsym.Name : (tt?.Name ?? "");
+                tbBySheet[owner] = new KeyValuePair<ElementId, string>(tb.GetTypeId(), nm);
+            }
+
             foreach (var vs in new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>())
+            {
+                tbBySheet.TryGetValue(vs.Id, out var tbInfo);
                 sheets.Add(Snapshot(new BrowserRow
                 {
                     Kind = "Лист",
@@ -72,8 +86,11 @@ namespace RevitQuickAccess.Browser
                     Id = vs.Id.Value,
                     Name = vs.Name,
                     SheetNumber = vs.SheetNumber,
-                    Group = ReadParam(vs, groupParam)
+                    Group = ReadParam(vs, groupParam),
+                    TitleBlockId = tbInfo.Key?.Value ?? -1,
+                    TitleBlockName = tbInfo.Value ?? ""
                 }));
+            }
 
             foreach (var v in new FilteredElementCollector(doc).OfClass(typeof(View)).Cast<View>())
             {
@@ -122,6 +139,48 @@ namespace RevitQuickAccess.Browser
                 ? counts.OrderByDescending(k => k.Value).First().Key
                 : (new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_TitleBlocks)
                         .OfClass(typeof(FamilySymbol)).FirstElementId() ?? ElementId.InvalidElementId);
+        }
+
+        /// <summary>
+        /// Duplicate a view or a sheet right away. Duplication is done immediately rather than queued
+        /// with the other edits — it needs no batching and this way you see the result at once.
+        /// </summary>
+        public static string DuplicateNow(Document doc, long elementId, bool isSheet, int option)
+        {
+            var el = doc.GetElement(new ElementId(elementId));
+            if (el == null) return "Элемент не найден — нажми «Загрузить из модели».";
+
+            using (var t = new Transaction(doc, "Quick Access — дублировать"))
+            {
+                t.Start();
+                try
+                {
+                    if (isSheet)
+                    {
+                        if (!(el is ViewSheet vs)) { t.RollBack(); return "Выбранная строка — не лист."; }
+                        var opt = (SheetDuplicateOption)Math.Max(0, Math.Min(3, option));
+                        if (!vs.CanBeDuplicated(opt)) { t.RollBack(); return "Этот лист нельзя дублировать в таком режиме."; }
+                        var id = vs.Duplicate(opt);
+                        t.Commit();
+                        return "Лист продублирован: " + (doc.GetElement(id)?.Name ?? "");
+                    }
+                    else
+                    {
+                        if (!(el is View v) || el is ViewSheet) { t.RollBack(); return "Выбранная строка — не вид."; }
+                        var vopt = option switch
+                        {
+                            1 => ViewDuplicateOption.WithDetailing,
+                            2 => ViewDuplicateOption.AsDependent,
+                            _ => ViewDuplicateOption.Duplicate
+                        };
+                        if (!v.CanViewBeDuplicated(vopt)) { t.RollBack(); return "Этот вид нельзя дублировать в таком режиме."; }
+                        var id = v.Duplicate(vopt);
+                        t.Commit();
+                        return "Вид продублирован: " + (doc.GetElement(id)?.Name ?? "");
+                    }
+                }
+                catch (Exception ex) { t.RollBack(); return "Не удалось продублировать: " + ex.Message; }
+            }
         }
 
         public static BrowserRow BuildDuplicateOfActive(Document doc, View active)

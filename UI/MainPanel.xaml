@@ -506,12 +506,19 @@
                         <StackPanel Grid.Row="2" Margin="0,0,0,6">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Основная надпись:" VerticalAlignment="Center" FontWeight="SemiBold"
+                                <TextBlock Grid.Column="0" Text="Штамп для НОВЫХ листов:" VerticalAlignment="Center" FontWeight="SemiBold"
                                            FontSize="11" Foreground="{StaticResource TextMid}" Margin="0,0,6,0"/>
                                 <ComboBox x:Name="cbTitleBlock" Grid.Column="1" DisplayMemberPath="Name"
                                           SelectionChanged="CbTitleBlock_Changed"
-                                          ToolTip="Какой штамп ставить на НОВЫЕ листы (по умолчанию — самый используемый в проекте)"/>
+                                          ToolTip="Какой штамп ставится на листы, создаваемые кнопкой «+ Лист». На существующие листы не влияет."/>
                             </Grid>
+                            <TextBlock x:Name="lblSheetTb" FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,3,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       Text="Выбери лист в таблице — здесь покажется его штамп."/>
+                            <CheckBox x:Name="chkAutoNumber" Margin="0,5,0,0" FontSize="11" Foreground="{StaticResource TextMid}"
+                                      Content="автонумерация листов (1…N) — строки можно перетаскивать"
+                                      ToolTip="Включи — и порядок строк задаёт номера листов. Перетаскивай строки мышью, номера пересчитаются сами."
+                                      Checked="ChkAutoNumber_Changed" Unchecked="ChkAutoNumber_Changed"/>
                         </StackPanel>
 
                         <Grid Grid.Row="3">
@@ -522,6 +529,8 @@
                                   VerticalGridLinesBrush="{StaticResource BorderLight}" RowBackground="White" FontSize="11"
                                   CanUserSortColumns="True" Sorting="DgBrowser_Sorting"
                                   CurrentCellChanged="DgBrowser_CurrentCellChanged"
+                                  SelectionChanged="DgBrowser_SelectionChanged"
+                                  AllowDrop="True" PreviewMouseMove="DgBrowser_PreviewMouseMove" Drop="DgBrowser_Drop"
                                   PreviewMouseRightButtonDown="DgBrowser_RightClick">
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
@@ -694,6 +703,16 @@
                 <TabItem Header="НАСТРОЙКИ">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="12">
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="О ПЛАГИНЕ" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <TextBlock x:Name="lblVersion" FontFamily="Consolas" FontSize="12"
+                                               Foreground="{StaticResource TextDark}"/>
+                                    <TextBlock x:Name="lblUpdateState" FontSize="10" Foreground="{StaticResource TextMuted}"
+                                               TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Border>
+
                             <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
                                 <StackPanel>
                                     <TextBlock Text="ИНСТРУМЕНТЫ ТРУБ" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>

@@ -28,4 +28,12 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <!-- Screenshots from docs/screenshots are embedded and shown as a slideshow in the installer.
+       Drop a PNG in that folder and it appears automatically — nothing else to edit. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\docs\screenshots\*.png">
+      <LogicalName>shot.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

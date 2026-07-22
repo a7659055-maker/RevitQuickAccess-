@@ -7,7 +7,7 @@ using Autodesk.Revit.UI;
 
 namespace RevitQuickAccess.Browser
 {
-    public enum BrowserMode { Load, Apply, AddDuplicate, OpenView }
+    public enum BrowserMode { Load, Apply, AddDuplicate, OpenView, DuplicateNow }
 
     /// <summary>
     /// UI-facing bridge for the batch browser tab. The DataGrid binds to <see cref="Rows"/>.
@@ -44,6 +44,17 @@ namespace RevitQuickAccess.Browser
         public static void RequestApply() => Raise(BrowserMode.Apply);
         public static void RequestAddDuplicate() => Raise(BrowserMode.AddDuplicate);
         public static void RequestOpen(long id) { OpenTargetId = id; Raise(BrowserMode.OpenView); }
+
+        /// <summary>Element to duplicate immediately (BrowserMode.DuplicateNow).</summary>
+        public static long DupTargetId { get; set; } = -1;
+        public static bool DupIsSheet { get; set; }
+        public static int DupOption { get; set; }
+
+        public static void RequestDuplicate(long id, bool isSheet, int option)
+        {
+            DupTargetId = id; DupIsSheet = isSheet; DupOption = option;
+            Raise(BrowserMode.DuplicateNow);
+        }
 
         private static void Raise(BrowserMode mode)
         {
@@ -114,6 +125,17 @@ namespace RevitQuickAccess.Browser
                         }
                         else BrowserManager.Notify("Активный вид нельзя дублировать (открой обычный вид).");
                         break;
+
+                    case BrowserMode.DuplicateNow:
+                    {
+                        string res = BrowserService.DuplicateNow(doc, BrowserManager.DupTargetId,
+                                                                 BrowserManager.DupIsSheet, BrowserManager.DupOption);
+                        // refresh so the new view/sheet shows up right away
+                        BrowserManager.SetRows(BrowserService.Load(doc, BrowserManager.GroupParam));
+                        BrowserManager.LoadTitleBlocks(doc);
+                        BrowserManager.Notify(res);
+                        break;
+                    }
 
                     case BrowserMode.OpenView:
                         try

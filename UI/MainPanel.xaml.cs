@@ -733,31 +733,29 @@ namespace RevitQuickAccess.UI
             if (cbTitleBlock.SelectedItem is TitleBlockOption tb) BrowserManager.TitleBlockId = tb.Id;
         }
 
-        // --- sheet duplication (deferred, like everything else here) ---
+        // --- duplication happens immediately (deferring it proved unreliable) ---
 
-        private void CtxDupSheetEmpty_Click(object sender, RoutedEventArgs e) => AddSheetDuplicate(0, "копия");
-        private void CtxDupSheetDet_Click(object sender, RoutedEventArgs e) => AddSheetDuplicate(1, "копия с детализацией");
-        private void CtxDupSheetViews_Click(object sender, RoutedEventArgs e) => AddSheetDuplicate(3, "копия с видами");
+        private void CtxDupSheetEmpty_Click(object sender, RoutedEventArgs e) => DuplicateNow(true, 0);
+        private void CtxDupSheetDet_Click(object sender, RoutedEventArgs e) => DuplicateNow(true, 1);
+        private void CtxDupSheetViews_Click(object sender, RoutedEventArgs e) => DuplicateNow(true, 3);
 
-        private void AddSheetDuplicate(int option, string suffix)
+        private void DuplicateNow(bool wantSheet, int option)
         {
             var r = SelectedRow;
-            if (r == null || r.IsNew || !r.IsSheet)
+            if (r == null || r.IsNew)
             {
-                lblBrowserStatus.Text = "Дублировать можно существующий ЛИСТ (выдели строку листа).";
+                lblBrowserStatus.Text = "Выдели существующую строку (не новую) и повтори.";
                 return;
             }
-            BrowserManager.AddRow(new BrowserRow
+            if (r.IsSheet != wantSheet)
             {
-                Kind = "Лист (копия)",
-                IsSheet = true,
-                IsNew = true,
-                SourceViewId = r.Id,
-                DupOption = option,
-                Name = r.Name + " " + suffix,
-                SheetNumber = ""
-            });
-            lblBrowserStatus.Text = "Копия листа добавлена — «Применить», чтобы создать.";
+                lblBrowserStatus.Text = wantSheet
+                    ? "Это вид, а не лист — используй «Дублировать вид»."
+                    : "Это лист, а не вид — используй «Дублировать ЛИСТ».";
+                return;
+            }
+            lblBrowserStatus.Text = "Дублирование…";
+            BrowserManager.RequestDuplicate(r.Id, r.IsSheet, option);
         }
 
         private void BtnBrowserLoad_Click(object sender, RoutedEventArgs e)
@@ -983,28 +981,87 @@ namespace RevitQuickAccess.UI
             dgBrowser.BeginEdit();
         }
 
-        private void CtxDup_Click(object sender, RoutedEventArgs e) => AddDuplicateFromSelected(0, "копия");
-        private void CtxDupDetail_Click(object sender, RoutedEventArgs e) => AddDuplicateFromSelected(1, "с детализацией");
-        private void CtxDupDependent_Click(object sender, RoutedEventArgs e) => AddDuplicateFromSelected(2, "зависимый");
+        private void CtxDup_Click(object sender, RoutedEventArgs e) => DuplicateNow(false, 0);
+        private void CtxDupDetail_Click(object sender, RoutedEventArgs e) => DuplicateNow(false, 1);
+        private void CtxDupDependent_Click(object sender, RoutedEventArgs e) => DuplicateNow(false, 2);
 
-        private void AddDuplicateFromSelected(int option, string suffix)
+        // --- selected row: show its real title block; auto-numbering + row drag-and-drop ---
+
+        private void DgBrowser_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var r = SelectedRow;
-            if (r == null || r.IsNew || r.IsSheet)
+            if (r == null) { lblSheetTb.Text = "Выбери лист в таблице — здесь покажется его штамп."; return; }
+            if (!r.IsSheet) { lblSheetTb.Text = "Выбран вид — у видов штампа нет."; return; }
+
+            lblSheetTb.Text = string.IsNullOrEmpty(r.TitleBlockName)
+                ? $"Штамп листа «{r.Name}»: нет"
+                : $"Штамп листа «{r.Name}»: {r.TitleBlockName}";
+
+            // mirror it in the combo so what you see matches the selected sheet
+            var match = BrowserManager.TitleBlocks.FirstOrDefault(t => t.Id.Value == r.TitleBlockId);
+            if (match != null) { _syncingTb = true; cbTitleBlock.SelectedItem = match; _syncingTb = false; }
+        }
+
+        private void ChkAutoNumber_Changed(object sender, RoutedEventArgs e)
+        {
+            if (chkAutoNumber.IsChecked == true) RenumberSheets();
+            else lblBrowserStatus.Text = "Автонумерация выключена — номера правятся вручную.";
+        }
+
+        /// <summary>Sheets get 1…N in the order they appear in the table.</summary>
+        private void RenumberSheets()
+        {
+            int n = 0;
+            foreach (var r in BrowserManager.Rows)
+                if (r.IsSheet && !r.ToDelete) r.SheetNumber = (++n).ToString();
+            lblBrowserStatus.Text = $"Автонумерация: пронумеровано листов — {n}. «Применить», чтобы записать в модель.";
+        }
+
+        private Point _rowDragStart;
+        private BrowserRow _rowDragItem;
+
+        private void DgBrowser_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (chkAutoNumber.IsChecked != true) return;             // drag only in auto-numbering mode
+            if (e.LeftButton != MouseButtonState.Pressed) { _rowDragItem = null; return; }
+            if (_filling || Mouse.Captured is Thumb) return;
+
+            var pos = e.GetPosition(dgBrowser);
+            if (_rowDragItem == null)
             {
-                lblBrowserStatus.Text = "Дублировать можно существующий вид (не лист).";
+                _rowDragItem = RowAt(pos);
+                _rowDragStart = pos;
                 return;
             }
-            BrowserManager.AddRow(new BrowserRow
-            {
-                Kind = "Вид (копия)",
-                IsSheet = false,
-                IsNew = true,
-                SourceViewId = r.Id,
-                DupOption = option,
-                Name = r.Name + " " + suffix
-            });
-            lblBrowserStatus.Text = "Копия добавлена — «Применить», чтобы создать.";
+            if (Math.Abs(pos.Y - _rowDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+            var item = _rowDragItem;
+            _rowDragItem = null;
+            if (item != null) DragDrop.DoDragDrop(dgBrowser, item, DragDropEffects.Move);
+        }
+
+        private void DgBrowser_Drop(object sender, DragEventArgs e)
+        {
+            if (chkAutoNumber.IsChecked != true) return;
+            if (!(e.Data.GetData(typeof(BrowserRow)) is BrowserRow dragged)) return;
+
+            var target = RowAt(e.GetPosition(dgBrowser));
+            if (target == null || ReferenceEquals(target, dragged)) return;
+
+            int from = BrowserManager.Rows.IndexOf(dragged);
+            int to = BrowserManager.Rows.IndexOf(target);
+            if (from < 0 || to < 0) return;
+
+            BrowserManager.Rows.Move(from, to);
+            RenumberSheets();
+            dgBrowser.SelectedItem = dragged;
+        }
+
+        private BrowserRow RowAt(Point p)
+        {
+            var hit = dgBrowser.InputHitTest(p) as DependencyObject;
+            while (hit != null && !(hit is DataGridRow)) hit = VisualTreeHelper.GetParent(hit);
+            return (hit as DataGridRow)?.Item as BrowserRow;
         }
 
         private void CtxDelete_Click(object sender, RoutedEventArgs e)
@@ -1075,6 +1132,15 @@ namespace RevitQuickAccess.UI
         {
             _syncingSettings = true;
             var ci = System.Globalization.CultureInfo.InvariantCulture;
+
+            var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            lblVersion.Text = "Revit Quick Access  v" + (ver == null ? "?" : $"{ver.Major}.{ver.Minor}.{ver.Build}");
+            string pending = Update.UpdateService.PendingVersion();
+            lblUpdateState.Text = pending != null
+                ? $"Загружена версия {pending} — установится после закрытия Revit."
+                : (PluginSettings.AutoUpdate
+                    ? "Авто-обновление включено: проверка при каждом запуске Revit."
+                    : "Авто-обновление выключено (autoUpdate=0 в настройках).");
             tbVertMm.Text = PluginSettings.VerticalPipeMm.ToString(ci);
             tbConnMm.Text = PluginSettings.ConnectorPipeMm.ToString(ci);
             tbTeeMm.Text = PluginSettings.TeeBranchMm.ToString(ci);

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,7 +12,15 @@ namespace RqaInstaller
     public partial class MainWindow : Window
     {
         private const string ProductName = "Revit Quick Access";
-        private const string ProductVersion = "1.0";
+
+        private static string ProductVersion
+        {
+            get
+            {
+                var v = Assembly.GetExecutingAssembly().GetName().Version;
+                return v == null ? "?" : $"{v.Major}.{v.Minor}.{v.Build}";
+            }
+        }
         private const string RegKey = @"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\RevitQuickAccess";
 
         private static readonly string TargetDir =
@@ -31,6 +40,7 @@ namespace RqaInstaller
             lblPath.Text = TargetDir;
             lblVersion.Text = "ВЕРСИЯ " + ProductVersion;
             RefreshState();
+            LoadSlideshow();
 
             if (uninstallMode)
             {
@@ -47,6 +57,57 @@ namespace RqaInstaller
         {
             base.OnClosed(e);
             Environment.Exit(0);
+        }
+
+        // ---- preview slideshow ----
+
+        private readonly System.Collections.Generic.List<System.Windows.Media.ImageSource> _shots =
+            new System.Collections.Generic.List<System.Windows.Media.ImageSource>();
+        private int _shotIndex;
+        private System.Windows.Threading.DispatcherTimer _shotTimer;
+
+        /// <summary>Show every PNG embedded from docs/screenshots, changing slide every 3.5 s.</summary>
+        private void LoadSlideshow()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                foreach (var name in asm.GetManifestResourceNames()
+                                        .Where(n => n.StartsWith("shot.", StringComparison.OrdinalIgnoreCase))
+                                        .OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+                {
+                    using var s = asm.GetManifestResourceStream(name);
+                    if (s == null) continue;
+                    var bi = new System.Windows.Media.Imaging.BitmapImage();
+                    bi.BeginInit();
+                    bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bi.StreamSource = s;
+                    bi.EndInit();
+                    bi.Freeze();
+                    _shots.Add(bi);
+                }
+            }
+            catch { }
+
+            if (_shots.Count == 0) { shotPanel.Visibility = Visibility.Collapsed; return; }
+
+            shotPanel.Visibility = Visibility.Visible;
+            ShowShot(0);
+            if (_shots.Count < 2) return;
+
+            _shotTimer = new System.Windows.Threading.DispatcherTimer
+            { Interval = TimeSpan.FromSeconds(3.5) };
+            _shotTimer.Tick += (s, e) => ShowShot((_shotIndex + 1) % _shots.Count);
+            _shotTimer.Start();
+        }
+
+        private void ShowShot(int i)
+        {
+            _shotIndex = i;
+            imgShot.Source = _shots[i];
+            lblShot.Text = $"{i + 1} / {_shots.Count}";
+            var fade = new System.Windows.Media.Animation.DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(350));
+            imgShot.BeginAnimation(OpacityProperty, fade);
         }
 
         // ---- state ----

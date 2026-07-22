@@ -28,6 +28,10 @@ namespace RevitQuickAccess.Browser
 
         public string Kind { get; set; } = "";
 
+        /// <summary>Title block type actually placed on this sheet (empty for views / sheets without one).</summary>
+        public long TitleBlockId { get; set; } = -1;
+        public string TitleBlockName { get; set; } = "";
+
         private string _name = "";
         private string _sheetNumber = "";
         private string _group = "";
