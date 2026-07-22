@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>RevitQuickAccess</AssemblyName>
+    <RootNamespace>RevitQuickAccess</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <!-- Revit already loads its own copies of these assemblies -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!-- Path to the installed Revit 2026 product folder -->
+  <PropertyGroup>
+    <RevitDir>C:\Program Files\Autodesk\Revit 2026</RevitDir>
+  </PropertyGroup>
+
+  <!-- The installer is a separate project; keep its sources out of the plugin build -->
+  <ItemGroup>
+    <Compile Remove="Installer\**" />
+    <Page Remove="Installer\**" />
+    <EmbeddedResource Remove="Installer\**" />
+    <None Remove="Installer\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>$(RevitDir)\AdWindows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UIFramework">
+      <HintPath>$(RevitDir)\UIFramework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

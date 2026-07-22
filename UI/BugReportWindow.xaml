@@ -1,0 +1,70 @@
+<Window x:Class="RevitQuickAccess.UI.BugReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Отчёт об ошибке" Width="440" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="#FFF8F9FA" FontFamily="Segoe UI" FontSize="13" Foreground="#FF2E3136">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Amber" Color="#FFC6811E"/>
+        <SolidColorBrush x:Key="AmberHover" Color="#FFD8912A"/>
+        <SolidColorBrush x:Key="LightBg" Color="#FFF5F6F7"/>
+        <SolidColorBrush x:Key="LightHover" Color="#FFE5E8EB"/>
+        <SolidColorBrush x:Key="BorderMid" Color="#FFA7ABB0"/>
+        <ControlTemplate x:Key="AnimBtn" TargetType="ButtonBase">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True" RenderTransformOrigin="0.5,0.5">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{Binding Tag, RelativeSource={RelativeSource Mode=TemplatedParent}}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="bd" Property="RenderTransform"><Setter.Value><ScaleTransform ScaleX="0.97" ScaleY="0.97"/></Setter.Value></Setter>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+        <Style x:Key="AmberBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="{StaticResource Amber}"/>
+            <Setter Property="Tag" Value="{StaticResource AmberHover}"/>
+            <Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="18,8"/><Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="LightBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="{StaticResource LightBg}"/>
+            <Setter Property="Tag" Value="{StaticResource LightHover}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18,8"/><Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="{StaticResource Amber}" BorderThickness="0,0,0,2" Padding="20,16" Background="#FFECEEF0">
+            <StackPanel>
+                <TextBlock Text="Опишите проблему" FontSize="17" FontWeight="Bold"/>
+                <TextBlock Text="Что произошло, что вы делали перед этим. Логи приложатся автоматически."
+                           Foreground="#FF696D72" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="20,16,20,16">
+            <TextBox x:Name="tbDesc" MinHeight="120" MaxHeight="220" AcceptsReturn="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto" Background="White" BorderBrush="{StaticResource BorderMid}"
+                     BorderThickness="1" Padding="8"/>
+            <TextBlock x:Name="lblHint" Foreground="#FF696D72" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                <Button Style="{StaticResource LightBtn}" Content="Отмена" Click="Cancel_Click"/>
+                <Button x:Name="btnSend" Style="{StaticResource AmberBtn}" Content="Отправить" Margin="8,0,0,0" Click="Send_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

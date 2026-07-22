@@ -1,0 +1,750 @@
+<UserControl x:Class="RevitQuickAccess.UI.MainPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:RevitQuickAccess.UI"
+             MinWidth="300" MinHeight="420" Background="#FFF8F9FA"
+             FontFamily="Segoe UI" FontSize="12" TextOptions.TextFormattingMode="Display"
+             ToolTipService.InitialShowDelay="350" ToolTipService.ShowDuration="30000" ToolTipService.BetweenShowDelay="0">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <ui:CommandToIconConverter x:Key="CmdIcon"/>
+        <!-- ===== Slate Amber Light palette ===== -->
+        <SolidColorBrush x:Key="CardBg"      Color="#FFF8F9FA"/>
+        <SolidColorBrush x:Key="HeaderBg"    Color="#FFECEEF0"/>
+        <SolidColorBrush x:Key="TabBarBg"    Color="#FFE6E8EB"/>
+        <SolidColorBrush x:Key="PanelBg"     Color="#FFF2F3F5"/>
+        <SolidColorBrush x:Key="BorderMid"   Color="#FFA7ABB0"/>
+        <SolidColorBrush x:Key="BorderStrong" Color="#FF8B8F94"/>
+        <SolidColorBrush x:Key="BorderLight" Color="#FFD3D6DA"/>
+        <SolidColorBrush x:Key="Amber"       Color="#FFC6811E"/>
+        <SolidColorBrush x:Key="AmberHover"  Color="#FFD8912A"/>
+        <SolidColorBrush x:Key="AmberText"   Color="#FFB0731A"/>
+        <SolidColorBrush x:Key="AmberPale"   Color="#FFF1E7D6"/>
+        <SolidColorBrush x:Key="TextDark"    Color="#FF2E3136"/>
+        <SolidColorBrush x:Key="TextMid"     Color="#FF696D72"/>
+        <SolidColorBrush x:Key="TextMuted"   Color="#FF7A7E83"/>
+        <SolidColorBrush x:Key="Red"         Color="#FFC24436"/>
+        <SolidColorBrush x:Key="RedPale"     Color="#FFF6E3E0"/>
+        <SolidColorBrush x:Key="LightBtnBg"  Color="#FFF5F6F7"/>
+        <SolidColorBrush x:Key="LightBtnHover" Color="#FFE5E8EB"/>
+
+        <!-- ===== animated button template ===== -->
+        <ControlTemplate x:Key="AnimBtn" TargetType="ButtonBase">
+            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True" RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="bd" Property="Background"
+                            Value="{Binding Tag, RelativeSource={RelativeSource Mode=TemplatedParent}}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.92" Duration="0:0:0.07"/>
+                                <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.92" Duration="0:0:0.07"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.14">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.6"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.14">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.6"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="bd" Property="Opacity" Value="0.45"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="AmberBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="{StaticResource Amber}"/>
+            <Setter Property="Tag" Value="{StaticResource AmberHover}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/><Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="14,7"/><Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="LightBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="{StaticResource LightBtnBg}"/>
+            <Setter Property="Tag" Value="{StaticResource LightBtnHover}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDark}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="12,7"/><Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="DeleteBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="{StaticResource LightBtnBg}"/>
+            <Setter Property="Tag" Value="{StaticResource RedPale}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="12,7"/><Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Red}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="IconBtn" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource AnimBtn}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Tag" Value="{StaticResource AmberPale}"/>
+            <Setter Property="Foreground" Value="{StaticResource AmberText}"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource AmberText}"/>
+            <Setter Property="FontWeight" Value="Bold"/><Setter Property="FontSize" Value="10"/>
+        </Style>
+        <Style x:Key="InputBox" TargetType="TextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDark}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7,6"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+        </Style>
+
+        <!-- ===== tab headers ===== -->
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource Amber}"
+                                BorderThickness="0,0,0,0" Padding="12,9">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource CardBg}"/>
+                                <Setter TargetName="bd" Property="BorderThickness" Value="0,0,0,2"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextDark}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="False"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bd" Property="Background" Value="#FFDDE0E3"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="{StaticResource BorderLight}" BorderThickness="1" Background="{StaticResource CardBg}">
+        <DockPanel>
+            <!-- title bar -->
+            <Border DockPanel.Dock="Top" Background="{StaticResource HeaderBg}"
+                    BorderBrush="{StaticResource Amber}" BorderThickness="0,0,0,2" Padding="12,7">
+                <Grid>
+                    <TextBlock Text="QUICK ACCESS" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextDark}"/>
+                    <Button x:Name="btnReport" Style="{StaticResource IconBtn}" HorizontalAlignment="Right"
+                            Click="BtnReport_Click" ToolTip="Отправить отчёт об ошибке">
+                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="17"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <TabControl x:Name="tabs" BorderThickness="0" Background="{StaticResource CardBg}" Padding="0">
+                <TabControl.Resources>
+                    <Style TargetType="TabPanel">
+                        <Setter Property="Background" Value="{StaticResource TabBarBg}"/>
+                    </Style>
+                </TabControl.Resources>
+
+                <!-- ===================== TAB 1: BINDS ===================== -->
+                <TabItem Header="БИНДЫ">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="НАБОР БИНДОВ" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="cbSets" Grid.Column="0" SelectionChanged="CbSets_Changed"
+                                          ToolTip="Активный набор биндов. Живут только его бинды."/>
+                                <Button Grid.Column="1" Style="{StaticResource LightBtn}" Content="+" Margin="6,0,0,0"
+                                        Click="BtnSetAdd_Click" ToolTip="Новый набор"/>
+                                <Button Grid.Column="2" Style="{StaticResource LightBtn}" Content="✎" Margin="4,0,0,0"
+                                        Click="BtnSetRename_Click" ToolTip="Переименовать набор"/>
+                                <Button Grid.Column="3" Style="{StaticResource DeleteBtn}" Content="✕" Margin="4,0,0,0"
+                                        Click="BtnSetDelete_Click" ToolTip="Удалить набор"/>
+                            </Grid>
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Активация:" VerticalAlignment="Center" FontSize="11"
+                                           Foreground="{StaticResource TextMid}" Margin="0,0,6,0"/>
+                                <TextBox x:Name="tbSetKey" Grid.Column="1" Style="{StaticResource InputBox}"
+                                         PreviewKeyDown="KeyBox_PreviewKeyDown"
+                                         ToolTip="Клавиша, которая переключает НА этот набор (напр. Ctrl+1)"/>
+                                <Button Grid.Column="2" Style="{StaticResource AmberBtn}" Content="Запись" Margin="6,0,0,0"
+                                        Click="BtnRecordSetKey_Click"/>
+                                <Button Grid.Column="3" Style="{StaticResource LightBtn}" Content="Задать" Margin="4,0,0,0"
+                                        Click="BtnSetKeyApply_Click" ToolTip="Назначить эту клавишу активацией набора"/>
+                            </Grid>
+                            <CheckBox x:Name="chkEnabled" Margin="0,8,0,0" VerticalContentAlignment="Center"
+                                      Foreground="{StaticResource TextDark}" FontWeight="SemiBold" FontSize="13"
+                                      ToolTip="Включить/выключить все бинды сразу. Горячая клавиша F8 работает в любом окне Revit."
+                                      Checked="ChkEnabled_Changed" Unchecked="ChkEnabled_Changed">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Включить бинды"/>
+                                    <TextBlock x:Name="lblToggle" Text=" · F8 вкл/выкл" Foreground="{StaticResource TextMuted}"
+                                               FontWeight="Normal" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                        </StackPanel>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="ЭКСПОРТ" Click="BtnExport_Click"
+                                    ToolTip="Сохранить все бинды в текстовый файл (для переноса/бэкапа)"/>
+                            <Button Grid.Column="1" Style="{StaticResource LightBtn}" Content="ИМПОРТ" Click="BtnImport_Click" Margin="6,0"
+                                    ToolTip="Загрузить бинды из файла (заменить или добавить к текущим)"/>
+                            <Button Grid.Column="2" x:Name="btnDelete" Style="{StaticResource DeleteBtn}" Content="УДАЛИТЬ"
+                                    Click="BtnDelete_Click" IsEnabled="False" ToolTip="Удалить выбранный в списке бинд"/>
+                        </Grid>
+
+                        <Border Grid.Row="2" BorderBrush="{StaticResource BorderMid}" BorderThickness="1">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Background="{StaticResource HeaderBg}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/><ColumnDefinition Width="2*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="КЛАВИША" Style="{StaticResource SectionLabel}" Padding="8,6"/>
+                                    <TextBlock Grid.Column="1" Text="КОМАНДА" Style="{StaticResource SectionLabel}" Padding="8,6"/>
+                                </Grid>
+                                <ListBox x:Name="lvBinds" BorderThickness="0" Background="White"
+                                         HorizontalContentAlignment="Stretch" SelectionChanged="LvBinds_SelectionChanged"
+                                         MouseDoubleClick="LvBinds_DoubleClick"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="1*"/><ColumnDefinition Width="2*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BorderBrush="{StaticResource BorderLight}" BorderThickness="0,0,1,0">
+                                                    <TextBlock Text="{Binding KeyCombo}" FontFamily="Consolas" FontWeight="SemiBold"
+                                                               FontSize="12" Foreground="{StaticResource TextDark}" Padding="8,5"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,5">
+                                                    <Image Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                           Source="{Binding Command, Converter={StaticResource CmdIcon}}"/>
+                                                    <TextBlock Text="{Binding Command}" FontFamily="Consolas" FontSize="12"
+                                                               Foreground="{StaticResource TextDark}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Grid.Row="3" Margin="0,10,0,0" Background="{StaticResource PanelBg}"
+                                BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="НОВЫЙ БИНД" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="62"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Клавиша" VerticalAlignment="Center" FontWeight="SemiBold"
+                                               FontSize="11" Foreground="{StaticResource TextMid}"/>
+                                    <TextBox x:Name="tbKey" Grid.Column="1" Style="{StaticResource InputBox}"
+                                             PreviewKeyDown="KeyBox_PreviewKeyDown"/>
+                                    <Button x:Name="btnRecordKey" Grid.Column="2" Style="{StaticResource AmberBtn}" Margin="6,0,0,0"
+                                            Click="BtnRecordKey_Click"
+                                            ToolTip="Записать сочетание клавиш: нажми, затем нажми нужные клавиши (можно Ctrl/Shift, аккорд или мультитап)">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="7" Height="7" Fill="White" Margin="0,0,5,0"/>
+                                            <TextBlock Text="ЗАПИСЬ"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="62"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Команда" VerticalAlignment="Center" FontWeight="SemiBold"
+                                               FontSize="11" Foreground="{StaticResource TextMid}"/>
+                                    <TextBox x:Name="tbCommand" Grid.Column="1" Style="{StaticResource InputBox}"/>
+                                    <Button x:Name="btnRecordCmd" Grid.Column="2" Style="{StaticResource AmberBtn}" Margin="6,0,0,0"
+                                            Click="BtnRecordCmd_Click"
+                                            ToolTip="Записать команду: нажми, затем кликни кнопку(и) на ленте Revit. С «цепочкой» — несколько кликов в макрос, потом нажми СТОП.">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="7" Height="7" Fill="White" Margin="0,0,5,0"/>
+                                            <TextBlock x:Name="txtRecCmd" Text="ЗАПИСЬ"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <CheckBox x:Name="chkSequenceBind" Content="цепочкой (макрос)" Margin="62,0,0,6"
+                                          Foreground="{StaticResource TextMid}" FontSize="11"
+                                          ToolTip="Записать несколько команд с ленты в один макрос для этого бинда (выполнятся по очереди)"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock x:Name="lblStatus" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11"/>
+                                    <Button Style="{StaticResource LightBtn}" Content="В БЫСТРЫЕ →" Click="BtnBindToQuick_Click"
+                                            ToolTip="Добавить команду из поля «Команда» плиткой во вкладку «Быстрые команды»"/>
+                                    <Button Style="{StaticResource LightBtn}" Content="ОТМЕНА" Margin="6,0,0,0" Click="BtnCancel_Click"
+                                            ToolTip="Отменить запись/редактирование и очистить поля"/>
+                                    <Button x:Name="btnAdd" Style="{StaticResource AmberBtn}" Content="ДОБАВИТЬ" Margin="6,0,0,0" Click="BtnAdd_Click"
+                                            ToolTip="Добавить бинд (или сохранить, если редактируешь существующий)"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <!-- ===================== TAB 2: QUICK COMMANDS (tiles) ===================== -->
+                <TabItem Header="БЫСТРЫЕ КОМАНДЫ">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <ToggleButton x:Name="btnRecord2" Cursor="Hand" Padding="14,7" Foreground="White"
+                                          Background="{StaticResource Amber}" BorderThickness="0"
+                                          ToolTip="Запись команды: включи, затем кликни кнопку на ленте Revit — появится плитка с её иконкой"
+                                          Checked="BtnRecord2_Checked" Unchecked="BtnRecord2_Unchecked">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Fill="White" Margin="0,0,6,0"/>
+                                    <TextBlock Text="ЗАПИСАТЬ КОМАНДУ" FontWeight="Bold" FontSize="11"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <CheckBox x:Name="chkSequence" Content="цепочкой (макрос)" VerticalAlignment="Center"
+                                      Margin="10,0,0,0" Foreground="{StaticResource TextMid}"
+                                      ToolTip="Записать несколько кликов подряд в одну команду-макрос (выполнятся по очереди)"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Background="{StaticResource HeaderBg}" BorderBrush="{StaticResource BorderLight}"
+                                BorderThickness="1" Padding="8,5" Margin="0,0,0,8">
+                            <TextBlock x:Name="lblQuickStatus" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextMid}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Text="Нажми «Записать команду», затем кликни кнопку на ленте Revit."/>
+                        </Border>
+
+                        <Border Grid.Row="2" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}"
+                                BorderThickness="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                                <ItemsControl x:Name="icQuick"
+                                              PreviewMouseMove="Tiles_PreviewMouseMove"
+                                              PreviewMouseLeftButtonUp="Tiles_PreviewMouseLeftButtonUp">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="{Binding Width}" Height="{Binding Height}" Margin="4"
+                                                  PreviewMouseLeftButtonDown="Tile_MouseDown">
+                                                <Grid.ToolTip>
+                                                    <ToolTip>
+                                                        <StackPanel MaxWidth="260">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                                            <TextBlock Text="{Binding Command}" FontFamily="Consolas" FontSize="10"
+                                                                       TextWrapping="Wrap" Opacity="0.7"/>
+                                                            <TextBlock Text="Клик — выполнить · тяни — переставить · края — размер · ☰ — меню"
+                                                                       FontSize="10" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                    </ToolTip>
+                                                </Grid.ToolTip>
+                                                <Border Background="White" BorderBrush="{StaticResource BorderMid}" BorderThickness="1"
+                                                        Padding="8,8,10,10">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid Grid.Row="0">
+                                                            <Border Background="{StaticResource HeaderBg}"
+                                                                    BorderBrush="{StaticResource BorderLight}" BorderThickness="1"/>
+                                                            <Image Source="{Binding IconSource}" Stretch="Uniform" Margin="8"/>
+                                                        </Grid>
+                                                        <TextBlock Grid.Row="1" Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap"
+                                                                   FontSize="11" Foreground="{StaticResource TextDark}" Margin="0,6,0,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Editing}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBox Grid.Row="1" Text="{Binding Name, UpdateSourceTrigger=LostFocus}" FontSize="11"
+                                                                 Visibility="{Binding Editing, Converter={StaticResource BoolVis}}"
+                                                                 KeyDown="TileRename_KeyDown" LostFocus="TileRename_LostFocus" Margin="0,6,0,0"/>
+                                                    </Grid>
+                                                </Border>
+                                                <!-- right resize grip (width) -->
+                                                <Thumb Width="7" HorizontalAlignment="Right" Cursor="SizeWE" Background="{StaticResource BorderLight}"
+                                                       DragDelta="TileResizeW_DragDelta" ToolTip="Тяни — ширина плитки">
+                                                    <Thumb.Template>
+                                                        <ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}"/></ControlTemplate>
+                                                    </Thumb.Template>
+                                                </Thumb>
+                                                <!-- bottom resize grip (height) -->
+                                                <Thumb Height="7" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Cursor="SizeNS"
+                                                       Background="{StaticResource BorderLight}"
+                                                       DragDelta="TileResizeH_DragDelta" ToolTip="Тяни — высота плитки">
+                                                    <Thumb.Template>
+                                                        <ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}"/></ControlTemplate>
+                                                    </Thumb.Template>
+                                                </Thumb>
+                                                <!-- hamburger menu -->
+                                                <Button Content="&#9776;" Width="20" Height="20" FontSize="12" Padding="0"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,10,0"
+                                                        Background="{StaticResource HeaderBg}" Foreground="{StaticResource TextMid}"
+                                                        BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Cursor="Hand"
+                                                        ToolTip="Меню плитки" Click="TileMenu_Click"/>
+                                                <Popup IsOpen="{Binding MenuOpen}" StaysOpen="False" Placement="MousePoint"
+                                                       AllowsTransparency="True">
+                                                    <Border Background="White" BorderBrush="{StaticResource BorderStrong}" BorderThickness="1">
+                                                        <StackPanel MinWidth="150">
+                                                            <Button Content="＋ Добавить бинд?" Style="{StaticResource LightBtn}"
+                                                                    HorizontalContentAlignment="Left" Background="White" Tag="{StaticResource AmberPale}"
+                                                                    Foreground="{StaticResource AmberText}" BorderThickness="0" Click="TileToBind_Click"/>
+                                                            <Button Content="✎ Переименовать" Style="{StaticResource LightBtn}"
+                                                                    HorizontalContentAlignment="Left" Background="White" BorderThickness="0" Click="TileRenameStart_Click"/>
+                                                            <Button Content="⧉ Дублировать" Style="{StaticResource LightBtn}"
+                                                                    HorizontalContentAlignment="Left" Background="White" BorderThickness="0" Click="TileDup_Click"/>
+                                                            <Button Content="✕ Удалить" Style="{StaticResource DeleteBtn}"
+                                                                    HorizontalContentAlignment="Left" Background="White" BorderThickness="0"
+                                                                    Foreground="{StaticResource Red}" Click="TileDelete_Click"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Popup>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Style="{StaticResource AmberBtn}" Content="＋ ПЛИТКА" Click="BtnAddTile_Click"
+                                    ToolTip="Добавить плитку — начнётся запись команды с ленты"/>
+                            <TextBlock VerticalAlignment="Center" Margin="10,0,0,0" FontSize="10" Foreground="{StaticResource TextMuted}"
+                                       TextWrapping="Wrap"
+                                       Text="Тяни за плитку — переставить · за левый край — ширина · ☰ — меню. Иконка сохраняется в конфиг."/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+
+                <!-- ===================== TAB 3: BROWSER TABLE ===================== -->
+                <TabItem Header="ДИСПЕТЧЕР">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="Загрузить из модели" Click="BtnBrowserLoad_Click"
+                                    ToolTip="Прочитать все виды и листы из модели в таблицу"/>
+                            <Button Grid.Column="1" Style="{StaticResource AmberBtn}" Content="Применить изменения" Margin="6,0,0,0" Click="BtnBrowserApply_Click"
+                                    ToolTip="Применить ВСЕ правки (переименования, номера, группы, создание, удаление) одной транзакцией"/>
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="＋ Лист" Click="BtnAddSheet_Click"
+                                    ToolTip="Добавить строку нового листа (создастся по «Применить»)"/>
+                            <Button Grid.Column="1" Style="{StaticResource LightBtn}" Content="＋ Копия вида" Margin="6,0" Click="BtnAddDup_Click"
+                                    ToolTip="Добавить копию активного вида (создастся по «Применить»)"/>
+                            <Button Grid.Column="2" Style="{StaticResource DeleteBtn}" Content="Убрать строку" Click="BtnRemoveRow_Click"
+                                    ToolTip="Убрать строку из таблицы (в модели вид/лист НЕ удаляется)"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="2" Margin="0,0,0,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Основная надпись:" VerticalAlignment="Center" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="{StaticResource TextMid}" Margin="0,0,6,0"/>
+                                <ComboBox x:Name="cbTitleBlock" Grid.Column="1" DisplayMemberPath="Name"
+                                          SelectionChanged="CbTitleBlock_Changed"
+                                          ToolTip="Какой штамп ставить на НОВЫЕ листы (по умолчанию — самый используемый в проекте)"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <Grid Grid.Row="3">
+                        <DataGrid x:Name="dgBrowser" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  HeadersVisibility="Column" RowHeaderWidth="0" SelectionMode="Single"
+                                  Background="White" BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"
+                                  GridLinesVisibility="All" HorizontalGridLinesBrush="{StaticResource BorderLight}"
+                                  VerticalGridLinesBrush="{StaticResource BorderLight}" RowBackground="White" FontSize="11"
+                                  CanUserSortColumns="True" Sorting="DgBrowser_Sorting"
+                                  CurrentCellChanged="DgBrowser_CurrentCellChanged"
+                                  PreviewMouseRightButtonDown="DgBrowser_RightClick">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Открыть" Click="CtxOpen_Click" FontWeight="Bold"/>
+                                    <MenuItem Header="Переименовать" Click="CtxRename_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Дублировать вид" Click="CtxDup_Click"/>
+                                    <MenuItem Header="Дублировать вид с детализацией" Click="CtxDupDetail_Click"/>
+                                    <MenuItem Header="Дублировать вид как зависимый" Click="CtxDupDependent_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Дублировать ЛИСТ (пустой)" Click="CtxDupSheetEmpty_Click"/>
+                                    <MenuItem Header="Дублировать ЛИСТ с детализацией" Click="CtxDupSheetDet_Click"/>
+                                    <MenuItem Header="Дублировать ЛИСТ с видами" Click="CtxDupSheetViews_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="+ Лист" Click="BtnAddSheet_Click"/>
+                                    <MenuItem Header="+ Копия активного вида" Click="BtnAddDup_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Удалить" Click="CtxDelete_Click" Foreground="#FFC24436"/>
+                                    <MenuItem Header="Убрать строку из таблицы" Click="BtnRemoveRow_Click"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{StaticResource HeaderBg}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AmberText}"/>
+                                    <Setter Property="FontWeight" Value="Bold"/><Setter Property="FontSize" Value="10"/>
+                                    <Setter Property="Padding" Value="6,5"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Status}" Value="новый">
+                                            <Setter Property="Background" Value="{StaticResource AmberPale}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Status}" Value="изменён">
+                                            <Setter Property="Background" Value="#FFFCF6EC"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ТИП" Binding="{Binding Kind}" IsReadOnly="True" Width="66" SortMemberPath="Kind"/>
+                                <DataGridTextColumn x:Name="colName" Header="ИМЯ" Width="*" SortMemberPath="Name"
+                                                    Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                                <DataGridTextColumn x:Name="colSheetNo" Header="№ ЛИСТА" Width="78" SortMemberPath="SheetNumber"
+                                                    Binding="{Binding SheetNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                                <DataGridTextColumn Header="СТАТУС" Binding="{Binding Status}" IsReadOnly="True" Width="70" SortMemberPath="Status"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Excel-style fill handle (drag down to auto-number) -->
+                        <Canvas x:Name="fillLayer">
+                            <Border x:Name="fillHandle" Width="9" Height="9" Visibility="Collapsed" Cursor="Cross"
+                                    Background="{StaticResource Amber}" BorderBrush="White" BorderThickness="1"
+                                    ToolTip="Потяни вниз — автозаполнение с нумерацией"
+                                    MouseLeftButtonDown="FillHandle_MouseDown"
+                                    MouseMove="FillHandle_MouseMove"
+                                    MouseLeftButtonUp="FillHandle_MouseUp"/>
+                        </Canvas>
+                        </Grid>
+
+                        <TextBlock x:Name="lblBrowserStatus" Grid.Row="4" Margin="0,6,0,0" FontSize="10"
+                                   Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                                   Text="«Загрузить из модели» → правь имена/номера/группы → «Применить» (одна транзакция)."/>
+                    </Grid>
+                </TabItem>
+
+                <!-- ===================== TAB 4: TRANSFER (precise copy/paste) ===================== -->
+                <TabItem Header="ПЕРЕНОС">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12">
+                            <!-- options -->
+                            <TextBlock Text="БАЗА КООРДИНАТ" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="cbBasis" SelectedIndex="0" Margin="0,0,0,6"
+                                      ToolTip="Общие/съёмка — та же реальная точка между проектами. Внутренние — как родная вставка Revit (по началу проекта).">
+                                <ComboBoxItem Content="Общие / съёмочные координаты"/>
+                                <ComboBoxItem Content="Внутренние координаты проекта"/>
+                            </ComboBox>
+                            <CheckBox x:Name="chkWholeSystem" Content="переносить всю MEP-систему целиком" Foreground="{StaticResource TextMid}"
+                                      FontSize="11" Margin="0,0,0,4" ToolTip="Тянуть связанную систему с коннекторами, а не только выделенные элементы"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <CheckBox x:Name="chkTag" Content="метка происхождения в параметр:" VerticalAlignment="Center"
+                                          Foreground="{StaticResource TextMid}" FontSize="11"
+                                          ToolTip="Записать в параметр вставленных элементов, откуда они (проект + дата)"/>
+                                <TextBox x:Name="tbTagParam" Style="{StaticResource InputBox}" Width="120" Margin="6,0,0,0"/>
+                            </StackPanel>
+
+                            <!-- exact copy/paste -->
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="В ТЕХ ЖЕ КООРДИНАТАХ" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="Копировать" Click="TrCopy_Click"
+                                                ToolTip="Скопировать выделенное (в активном проекте-источнике)"/>
+                                        <Button Grid.Column="1" Style="{StaticResource AmberBtn}" Content="Вставить в исходных" Margin="6,0,0,0"
+                                                Click="TrPasteExact_Click" ToolTip="Открой целевой проект и жми — объект встанет в ту же точку по выбранной базе"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- base point -->
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="ПО ОПОРНОЙ ТОЧКЕ (как COPYBASE)" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <CheckBox x:Name="chkWithDir" Content="+ направление (2-я точка задаёт поворот)" Foreground="{StaticResource TextMid}"
+                                              FontSize="11" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="Копировать с опорной" Click="TrCopyBase_Click"
+                                                ToolTip="Выдели объекты, нажми — потом укажи опорную точку (угол/край)"/>
+                                        <Button Grid.Column="1" Style="{StaticResource AmberBtn}" Content="Вставить по опорной" Margin="6,0,0,0"
+                                                Click="TrPasteBase_Click" ToolTip="Укажи целевую точку — опорная сядет туда"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- inspector + move -->
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="КООРДИНАТЫ" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="Инспектор (X/Y/Z выделенного)"
+                                                Click="TrInspect_Click" ToolTip="Показать и запомнить координаты выделенного объекта"/>
+                                        <Button Grid.Column="1" Style="{StaticResource AmberBtn}" Content="Вставить коорд." Margin="6,0,0,0"
+                                                Click="TrPasteCoords_Click" ToolTip="Подставить запомненные координаты в поля X/Y/Z ниже"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="XYZ мм:" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextMid}" Margin="0,0,6,0"/>
+                                        <TextBox x:Name="tbMoveX" Grid.Column="1" Style="{StaticResource InputBox}" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="tbMoveY" Grid.Column="2" Style="{StaticResource InputBox}" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="tbMoveZ" Grid.Column="3" Style="{StaticResource InputBox}" Margin="0,0,6,0"/>
+                                        <Button Grid.Column="4" Style="{StaticResource AmberBtn}" Content="→" Click="TrMove_Click"
+                                                ToolTip="Переместить выделенный объект ровно в эти координаты"/>
+                                    </Grid>
+                                    <CheckBox x:Name="chkMoveShared" Content="в общих/съёмочных координатах" Foreground="{StaticResource TextMid}"
+                                              FontSize="11" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- CSV -->
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="ПО СПИСКУ ТОЧЕК (CSV)" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Формат строки: X;Y;Z в мм. Раскидает скопированное по всем точкам." FontSize="10"
+                                               Foreground="{StaticResource TextMuted}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource LightBtn}" Content="Выбрать CSV…" Click="TrCsvPick_Click"/>
+                                        <Button Grid.Column="1" Style="{StaticResource AmberBtn}" Content="Вставить по CSV" Margin="6,0,0,0" Click="TrPasteCsv_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock x:Name="lblTransferStatus" FontSize="11" Foreground="{StaticResource TextMid}" TextWrapping="Wrap"
+                                       Text="Выдели объекты в источнике → «Копировать» → открой цель → «Вставить в исходных»."/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- ===================== TAB 5: SETTINGS ===================== -->
+                <TabItem Header="НАСТРОЙКИ">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12">
+                            <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="ИНСТРУМЕНТЫ ТРУБ" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                    <TextBlock TextWrapping="Wrap" FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"
+                                               Text="«Стояк» — строит вертикальную трубу от коннектора (угольник ставится сам). «По коннектору» — строит трубу в направлении самого коннектора (прямо, без отвода). Тип трубы и системы берутся от уже подключённой трубы. Обе — кнопки на ленте, можно биндить."/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Стояк, мм:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{StaticResource TextMid}" Margin="0,0,6,0" Width="120"/>
+                                        <TextBox x:Name="tbVertMm" Grid.Column="1" Style="{StaticResource InputBox}"/>
+                                    </Grid>
+                                    <CheckBox x:Name="chkVertUp" Content="стояк строить вверх (снять — вниз)" Foreground="{StaticResource TextMid}"
+                                              FontSize="11" Margin="0,0,0,8" Checked="VertDir_Changed" Unchecked="VertDir_Changed"/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="По коннектору, мм:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{StaticResource TextMid}" Margin="0,0,6,0" Width="120"/>
+                                        <TextBox x:Name="tbConnMm" Grid.Column="1" Style="{StaticResource InputBox}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ответвление тройника, мм:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{StaticResource TextMid}" Margin="0,0,6,0" Width="120" TextWrapping="Wrap"/>
+                                        <TextBox x:Name="tbTeeMm" Grid.Column="1" Style="{StaticResource InputBox}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Шаг муфт, мм:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{StaticResource TextMid}" Margin="0,0,6,0" Width="120"/>
+                                        <TextBox x:Name="tbCoupMm" Grid.Column="1" Style="{StaticResource InputBox}"/>
+                                    </Grid>
+
+                                    <Button Style="{StaticResource AmberBtn}" Content="Сохранить" HorizontalAlignment="Right"
+                                            Click="BtnSaveSettings_Click"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock x:Name="lblSettingsStatus" FontSize="11" Foreground="{StaticResource TextMid}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,22 @@
+# build output
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# distributed via GitHub Releases, not committed
+RevitQuickAccess-Setup.exe
+
+# local runtime data — user-specific, must never be published
+RevitQuickAccess_mail.txt
+RevitQuickAccess_binds.txt
+RevitQuickAccess_bindsets.txt
+RevitQuickAccess_quick.txt
+RevitQuickAccess_settings.txt
+RevitQuickAccess_keylog.txt
+session.lock
+icons/
+reports/
+pending_reports/
+*.old_*

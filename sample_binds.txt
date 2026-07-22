@@ -1,0 +1,27 @@
+# RevitQuickAccess — пример конфигурации биндов
+# формат: КЛАВИША<Tab>КОМАНДА   (между ними табуляция)
+# enabled=1
+#
+# КЛАВИША: E · Ctrl+E · Shift+Alt+L · E*2 (двойное) · E*3 (тройное) · A+S (аккорд, держать вместе) · __TOGGLE__
+# КОМАНДА: ID_... (внутренний id Revit) · имя PostableCommand · макрос из шагов через "  ;  "
+#
+# Одиночные клавиши:
+W	ID_OBJECTS_WALL
+D	ID_OBJECTS_DOOR
+N	ID_OBJECTS_WINDOW
+#
+# С модификатором:
+Ctrl+G	ID_OBJECTS_GRID
+#
+# Двойное / тройное нажатие:
+Z*2	ID_BUTTON_UNDO
+Z*3	ID_BUTTON_REDO
+#
+# Аккорд (держать A и S одновременно):
+A+S	ID_DIMENSION_ALIGNED
+#
+# Вкл/выкл все бинды по F8:
+F8	__TOGGLE__
+#
+# Макрос (шаги подряд, через " ; "):
+# M	ID_OBJECTS_WALL ; ID_OBJECTS_DOOR

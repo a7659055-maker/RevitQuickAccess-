@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Revit Quick Access</Name>
+    <Assembly>RevitQuickAccess.dll</Assembly>
+    <AddInId>8f3a2b1c-4d5e-6f70-8192-a3b4c5d6e7f8</AddInId>
+    <FullClassName>RevitQuickAccess.App</FullClassName>
+    <VendorId>RQA</VendorId>
+    <VendorDescription>Revit Quick Access - keybinds, quick commands, batch browser</VendorDescription>
+  </AddIn>
+</RevitAddIns>
