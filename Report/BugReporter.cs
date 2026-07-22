@@ -1,75 +1,63 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using RevitQuickAccess.Settings;
 
 namespace RevitQuickAccess.Report
 {
     /// <summary>
-    /// Builds and sends bug/crash reports to the developer address. Sending strategy:
-    ///   • if a mail config file (RevitQuickAccess_mail.txt) with sender credentials exists → real
-    ///     SMTP send (also used for silent auto-send of crash reports on the next launch);
-    ///   • otherwise → open the user's mail client (mailto:) prefilled, and put the full report in a
-    ///     file + the clipboard so nothing is lost.
-    /// No credentials are ever embedded in the plugin — the user supplies them in the config if they
-    /// want fully-automatic sending.
+    /// Builds bug/crash reports and posts them to a self-hosted relay endpoint (a Cloudflare Worker).
+    ///
+    /// Why a relay: the plugin is open source, so it must ship no credentials. The Worker holds the
+    /// secret (Telegram token, webhook, mailbox — whatever you wire up on its side) and the plugin
+    /// only knows a public HTTPS URL. That also makes crash reports genuinely automatic.
+    ///
+    /// If no endpoint is configured (or it is unreachable) the report is still saved to a file and
+    /// copied to the clipboard, so nothing is ever lost.
     /// </summary>
     public static class BugReporter
     {
-        public const string DefaultTo = "du2look@mail.ru";
-
         private static string BaseDir => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
         private static string ReportsDir => EnsureDir(Path.Combine(BaseDir, "reports"));
         internal static string PendingDir => EnsureDir(Path.Combine(BaseDir, "pending_reports"));
-        private static string MailConfigPath => Path.Combine(BaseDir, "RevitQuickAccess_mail.txt");
 
-        public static bool SmtpConfigured => LoadMailConfig() != null;
+        public static bool EndpointConfigured => !string.IsNullOrWhiteSpace(PluginSettings.ReportEndpoint);
 
         // ---- public API ----
 
-        /// <summary>Compose + save + send a report from the panel's dialog.</summary>
         public static ReportResult Send(string description, bool isCrash = false)
         {
             string report = Compose(description, isCrash);
             string file = SaveReport(report);
 
-            var cfg = LoadMailConfig();
-            if (cfg != null && TrySmtp(cfg, isCrash ? "CRASH report" : "Bug report", report, out string err))
-                return new ReportResult(true, "Отчёт отправлен на " + cfg.To + ".", file);
+            if (Post(isCrash ? "crash" : "bug", report, out string err))
+                return new ReportResult(true, "Отчёт отправлен. Спасибо!", file);
 
-            // fallback: clipboard + mail client
             TryClipboard(report);
-            bool opened = OpenMailto(cfg?.To ?? DefaultTo, isCrash ? "RevitQuickAccess CRASH" : "RevitQuickAccess bug report", report);
-            string msg = opened
-                ? "Открыт почтовый клиент — нажми «Отправить». Полный отчёт также в буфере обмена и в файле."
-                : "Отчёт сохранён в файл и скопирован в буфер обмена (почтовый клиент не открылся).";
-            return new ReportResult(false, msg, file);
+            string why = EndpointConfigured
+                ? "Не удалось отправить (" + err + ")."
+                : "Приём отчётов не настроен.";
+            return new ReportResult(false, why + " Отчёт сохранён в файл и скопирован в буфер обмена.", file);
         }
 
-        /// <summary>Try to send everything queued by the crash guard (called on startup).</summary>
-        public static int SendPending()
+        /// <summary>Fire-and-forget delivery of crash reports queued by the crash guard.</summary>
+        public static void SendPendingInBackground()
         {
-            var cfg = LoadMailConfig();
-            if (cfg == null) return 0;                 // without SMTP we can't send silently
-            int sent = 0;
-            foreach (var f in GetPendingFiles())
+            if (!EndpointConfigured) return;
+            Task.Run(() =>
             {
-                try
+                foreach (var f in GetPendingFiles())
                 {
-                    string body = File.ReadAllText(f);
-                    if (TrySmtp(cfg, "CRASH report (auto)", body, out _))
-                    {
-                        File.Delete(f);
-                        sent++;
-                    }
+                    try { if (Post("crash", File.ReadAllText(f), out _)) File.Delete(f); }
+                    catch { }
                 }
-                catch { }
-            }
-            return sent;
+            });
         }
 
         public static List<string> GetPendingFiles()
@@ -78,7 +66,6 @@ namespace RevitQuickAccess.Report
             catch { return new List<string>(); }
         }
 
-        /// <summary>Read + merge any pending crash reports into a description (for the dialog to prefill).</summary>
         public static string ReadPendingSummary()
         {
             var files = GetPendingFiles();
@@ -104,7 +91,7 @@ namespace RevitQuickAccess.Report
             var sb = new StringBuilder();
             sb.AppendLine("=== RevitQuickAccess " + (isCrash ? "CRASH" : "BUG") + " REPORT ===");
             sb.AppendLine("Время: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            sb.AppendLine("Плагин: " + (Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?"));
+            sb.AppendLine("Плагин: " + Ver());
             sb.AppendLine(RevitInfo());
             sb.AppendLine("ОС: " + RuntimeInformation.OSDescription + " | .NET " + RuntimeInformation.FrameworkDescription);
             sb.AppendLine();
@@ -114,100 +101,59 @@ namespace RevitQuickAccess.Report
             sb.AppendLine("--- Диагностика ---");
             sb.AppendLine("keylog (хвост):");
             sb.AppendLine(Tail(Path.Combine(BaseDir, "RevitQuickAccess_keylog.txt"), 1500));
-            sb.AppendLine("binds:");
-            sb.AppendLine(Tail(Path.Combine(BaseDir, "RevitQuickAccess_binds.txt"), 800));
+            sb.AppendLine("bind sets:");
+            sb.AppendLine(Tail(Path.Combine(BaseDir, "RevitQuickAccess_bindsets.txt"), 800));
             sb.AppendLine("quick:");
             sb.AppendLine(Tail(Path.Combine(BaseDir, "RevitQuickAccess_quick.txt"), 800));
+            sb.AppendLine("update log:");
+            sb.AppendLine(Tail(Path.Combine(BaseDir, "RevitQuickAccess_update.log"), 500));
             return sb.ToString();
         }
+
+        private static string Ver() =>
+            Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
 
         private static string RevitInfo()
         {
             try
             {
                 var app = App.UiApp?.Application;
-                if (app != null)
-                    return $"Revit: {app.VersionName} {app.VersionNumber} (build {app.VersionBuild})";
+                if (app != null) return $"Revit: {app.VersionName} {app.VersionNumber} (build {app.VersionBuild})";
             }
             catch { }
             return "Revit: (недоступно)";
         }
 
-        // ---- SMTP ----
+        // ---- transport ----
 
-        private sealed class MailConfig
-        {
-            public string Host = "smtp.mail.ru";
-            public int Port = 587;
-            public string From = "";
-            public string Password = "";
-            public string To = DefaultTo;
-        }
-
-        private static MailConfig LoadMailConfig()
-        {
-            try
-            {
-                if (!File.Exists(MailConfigPath)) return null;
-                var c = new MailConfig();
-                foreach (var raw in File.ReadAllLines(MailConfigPath))
-                {
-                    string line = raw?.Trim() ?? "";
-                    if (line.Length == 0 || line.StartsWith("#")) continue;
-                    int i = line.IndexOf('=');
-                    if (i <= 0) continue;
-                    string k = line.Substring(0, i).Trim().ToLowerInvariant();
-                    string v = line.Substring(i + 1).Trim();
-                    switch (k)
-                    {
-                        case "host": c.Host = v; break;
-                        case "port": if (int.TryParse(v, out int p)) c.Port = p; break;
-                        case "from": c.From = v; break;
-                        case "password": c.Password = v; break;
-                        case "to": c.To = v; break;
-                    }
-                }
-                return string.IsNullOrWhiteSpace(c.From) || string.IsNullOrWhiteSpace(c.Password) ? null : c;
-            }
-            catch { return null; }
-        }
-
-        private static bool TrySmtp(MailConfig cfg, string subject, string body, out string err)
+        private static bool Post(string kind, string report, out string err)
         {
             err = "";
+            string ep = (PluginSettings.ReportEndpoint ?? "").Trim();
+            if (string.IsNullOrEmpty(ep)) { err = "эндпоинт не задан"; return false; }
+
             try
             {
-                using var msg = new MailMessage(cfg.From, cfg.To)
+                string payload = JsonSerializer.Serialize(new
                 {
-                    Subject = "RevitQuickAccess: " + subject,
-                    Body = body
-                };
-                using var client = new SmtpClient(cfg.Host, cfg.Port)
+                    kind,
+                    version = Ver(),
+                    revit = RevitInfo(),
+                    os = RuntimeInformation.OSDescription,
+                    report
+                });
+
+                // Task.Run keeps us off the UI SynchronizationContext, so waiting can't deadlock.
+                return Task.Run(async () =>
                 {
-                    EnableSsl = true,
-                    DeliveryMethod = SmtpDeliveryMethod.Network,
-                    Credentials = new NetworkCredential(cfg.From, cfg.Password),
-                    Timeout = 15000
-                };
-                client.Send(msg);
-                return true;
+                    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("RevitQuickAccess");
+                    using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                    var resp = await http.PostAsync(ep, content);
+                    return resp.IsSuccessStatusCode;
+                }).GetAwaiter().GetResult();
             }
             catch (Exception ex) { err = ex.Message; return false; }
-        }
-
-        // ---- mailto + clipboard + files ----
-
-        private static bool OpenMailto(string to, string subject, string report)
-        {
-            try
-            {
-                // mailto body is length-limited; send a short note and point to the file/clipboard
-                string shortBody = report.Length > 1500 ? report.Substring(0, 1500) + "\n…(полный отчёт в буфере обмена и в файле reports\\)" : report;
-                string url = $"mailto:{to}?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(shortBody)}";
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-                return true;
-            }
-            catch { return false; }
         }
 
         private static void TryClipboard(string text)

@@ -6,6 +6,20 @@ using System.Reflection;
 
 namespace RevitQuickAccess.Settings
 {
+    /// <summary>
+    /// Build-time defaults. Both can be overridden per machine in RevitQuickAccess_settings.txt,
+    /// so nothing secret ever has to live in the source.
+    /// </summary>
+    public static class UpdateDefaults
+    {
+        /// <summary>GitHub repository the plugin updates itself from ("owner/repo").</summary>
+        public const string Repo = "";           // TODO: set to "<github-login>/RevitQuickAccess"
+
+        /// <summary>Public relay endpoint that receives bug reports (Cloudflare Worker URL).</summary>
+        public const string ReportEndpoint = ""; // TODO: set to the deployed Worker URL
+    }
+
+
     /// <summary>Simple key=value settings stored next to the plugin DLL.</summary>
     public static class PluginSettings
     {
@@ -23,6 +37,15 @@ namespace RevitQuickAccess.Settings
 
         /// <summary>Default distance between couplings (pipe segment length), in mm.</summary>
         public static double CouplingStepMm { get; set; } = 4000;
+
+        /// <summary>GitHub repo to auto-update from, as "owner/repo". Empty = updates off.</summary>
+        public static string UpdateRepo { get; set; } = UpdateDefaults.Repo;
+
+        /// <summary>Check GitHub for a newer release on every Revit start.</summary>
+        public static bool AutoUpdate { get; set; } = true;
+
+        /// <summary>HTTPS endpoint that receives bug/crash reports (your Cloudflare Worker).</summary>
+        public static string ReportEndpoint { get; set; } = UpdateDefaults.ReportEndpoint;
 
         private static string PathFile
         {
@@ -67,6 +90,11 @@ namespace RevitQuickAccess.Settings
                             if (double.TryParse(v.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double cs) && cs > 0)
                                 CouplingStepMm = cs;
                             break;
+                        case "updaterepo": UpdateRepo = v; break;
+                        case "reportendpoint": ReportEndpoint = v; break;
+                        case "autoupdate":
+                            AutoUpdate = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
+                            break;
                     }
                 }
             }
@@ -84,7 +112,10 @@ namespace RevitQuickAccess.Settings
                     "verticalPipeUp=" + (VerticalPipeUp ? "1" : "0"),
                     "connectorPipeMm=" + ConnectorPipeMm.ToString(CultureInfo.InvariantCulture),
                     "teeBranchMm=" + TeeBranchMm.ToString(CultureInfo.InvariantCulture),
-                    "couplingStepMm=" + CouplingStepMm.ToString(CultureInfo.InvariantCulture)
+                    "couplingStepMm=" + CouplingStepMm.ToString(CultureInfo.InvariantCulture),
+                    "updateRepo=" + UpdateRepo,
+                    "autoUpdate=" + (AutoUpdate ? "1" : "0"),
+                    "reportEndpoint=" + ReportEndpoint
                 };
                 File.WriteAllLines(PathFile, lines);
             }

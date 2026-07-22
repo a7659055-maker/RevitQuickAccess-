@@ -36,9 +36,13 @@ namespace RevitQuickAccess
                 // and auto-send any pending crash reports (if SMTP is configured in the mail config).
                 CrashGuard.Install(System.Windows.Threading.Dispatcher.CurrentDispatcher);
                 CrashGuard.MarkSessionStart();
-                try { BugReporter.SendPending(); } catch { }
 
                 Settings.PluginSettings.Load();
+
+                // deliver queued crash reports and look for a newer release — both off the UI thread,
+                // so Revit's startup is never delayed by network I/O
+                try { BugReporter.SendPendingInBackground(); } catch { }
+                try { Update.UpdateService.CheckInBackground(); } catch { }
                 BindsManager.Load();
                 QuickCommandsManager.Load();
 

@@ -12,10 +12,9 @@ namespace RevitQuickAccess.UI
             InitializeComponent();
             _isCrash = isCrash;
             if (!string.IsNullOrEmpty(prefill)) tbDesc.Text = prefill;
-            lblHint.Text = BugReporter.SmtpConfigured
-                ? "Режим SMTP настроен — отчёт уйдёт на " + BugReporter.DefaultTo + " автоматически."
-                : "Откроется почтовый клиент с готовым письмом на " + BugReporter.DefaultTo +
-                  " (полный отчёт также ляжет в буфер обмена и в папку reports).";
+            lblHint.Text = BugReporter.EndpointConfigured
+                ? "Отчёт уйдёт разработчику автоматически. Копия сохранится в папку reports."
+                : "Приём отчётов пока не настроен — отчёт сохранится в папку reports и в буфер обмена.";
             Loaded += (s, e) => { tbDesc.Focus(); tbDesc.CaretIndex = tbDesc.Text.Length; };
         }
 
