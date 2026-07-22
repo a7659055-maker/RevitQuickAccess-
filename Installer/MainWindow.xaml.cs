@@ -93,21 +93,44 @@ namespace RqaInstaller
 
             shotPanel.Visibility = Visibility.Visible;
             ShowShot(0);
-            if (_shots.Count < 2) return;
+
+            bool many = _shots.Count > 1;
+            btnShotPrev.Visibility = btnShotNext.Visibility = many ? Visibility.Visible : Visibility.Collapsed;
+            if (!many) return;
 
             _shotTimer = new System.Windows.Threading.DispatcherTimer
             { Interval = TimeSpan.FromSeconds(3.5) };
-            _shotTimer.Tick += (s, e) => ShowShot((_shotIndex + 1) % _shots.Count);
+            _shotTimer.Tick += (s, e) => ShowShot(_shotIndex + 1);
             _shotTimer.Start();
         }
 
         private void ShowShot(int i)
         {
-            _shotIndex = i;
-            imgShot.Source = _shots[i];
-            lblShot.Text = $"{i + 1} / {_shots.Count}";
+            if (_shots.Count == 0) return;
+            _shotIndex = ((i % _shots.Count) + _shots.Count) % _shots.Count;
+            imgShot.Source = _shots[_shotIndex];
+            lblShot.Text = $"{_shotIndex + 1} / {_shots.Count}";
             var fade = new System.Windows.Media.Animation.DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(350));
             imgShot.BeginAnimation(OpacityProperty, fade);
+        }
+
+        /// <summary>Once the arrows are used, autoplay stops — otherwise the slide jumps away mid-look.</summary>
+        private void StopAutoPlay()
+        {
+            if (_shotTimer == null) return;
+            _shotTimer.Stop();
+            _shotTimer = null;
+        }
+
+        private void ShotPrev_Click(object sender, RoutedEventArgs e) { StopAutoPlay(); ShowShot(_shotIndex - 1); }
+
+        private void ShotNext_Click(object sender, RoutedEventArgs e) { StopAutoPlay(); ShowShot(_shotIndex + 1); }
+
+        private void Shot_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_shots.Count == 0) return;
+            StopAutoPlay();
+            try { new ShotViewer(_shots, _shotIndex) { Owner = this }.ShowDialog(); } catch { }
         }
 
         // ---- state ----

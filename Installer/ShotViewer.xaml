@@ -1,0 +1,56 @@
+<Window x:Class="RqaInstaller.ShotViewer"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Revit Quick Access — превью" WindowStartupLocation="CenterScreen"
+        Background="#FF181C21" FontFamily="Segoe UI" Foreground="White"
+        WindowState="Maximized" WindowStyle="SingleBorderWindow"
+        KeyDown="Window_KeyDown">
+    <Window.Resources>
+        <SolidColorBrush x:Key="NavBg"      Color="#99000000"/>
+        <SolidColorBrush x:Key="NavBgHover" Color="#D9000000"/>
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="34"/><Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Width" Value="52"/><Setter Property="Height" Value="110"/>
+            <Setter Property="Margin" Value="18,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{StaticResource NavBg}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource NavBgHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <!-- Uniform never upscales past the source, so a screenshot shows at 1:1 at most -->
+            <Image x:Name="img" Stretch="Uniform" Margin="24,24,24,12"/>
+            <Button Style="{StaticResource NavBtn}" Content="‹" HorizontalAlignment="Left" Click="Prev_Click"/>
+            <Button Style="{StaticResource NavBtn}" Content="›" HorizontalAlignment="Right" Click="Next_Click"/>
+        </Grid>
+
+        <DockPanel Grid.Row="1" Margin="24,0,24,16" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="← → — листать · Esc — закрыть"
+                       Foreground="#FF8A939D" FontSize="12" VerticalAlignment="Center"/>
+            <TextBlock x:Name="lblIndex" DockPanel.Dock="Right" Foreground="#FFC9D3DE" FontSize="12"
+                       VerticalAlignment="Center"/>
+        </DockPanel>
+    </Grid>
+</Window>
