@@ -10,7 +10,7 @@
     <AssemblyName>RevitQuickAccess-Setup</AssemblyName>
     <RootNamespace>RqaInstaller</RootNamespace>
     <AssemblyTitle>Revit Quick Access Setup</AssemblyTitle>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <!-- single self-launching exe (framework-dependent: user has .NET 8 desktop runtime) -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
