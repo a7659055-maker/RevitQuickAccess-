@@ -86,6 +86,22 @@ namespace RevitQuickAccess
                 Add("RQA_Coupling", "Авто\nмуфты", "CouplingCommand", "М",
                     "Автомуфты: разрезает выбранные трубы на сегменты и ставит муфты из трассировки типа");
 
+                Add("RQA_SysType", "Тип\nсистемы", "SystemTypeCommand", "С",
+                    "Сменить тип системы у выделенного: у подключённой арматуры тип меняется через саму MEP-систему, " +
+                    "иначе Revit возвращает старый");
+                Add("RQA_PipeMat", "Материал\nтрубы", "PipeMaterialCommand", "◆",
+                    "Сменить материал типа трубопровода через сегмент: создаёт сегмент с нужным материалом, " +
+                    "подставляет в трассировку и обновляет уже нарисованные трубы");
+
+                tools.AddItem(new PushButtonData("RQA_FlexType", "Гибкий\nтип", asmPath,
+                    "RevitQuickAccess.Commands.FlexTypeCommand")
+                {
+                    ToolTip = "Создать тип гибкого трубопровода по образцу обычного типа (имя + «_Гибкий»): " +
+                              "параметры, материал и первый диаметр",
+                    LargeImage = RibbonIcon.MakeFlex(32),
+                    Image = RibbonIcon.MakeFlex(16)
+                });
+
                 tools.AddItem(new PushButtonData("RQA_FlexPipe", "Гибкая\nтруба", asmPath,
                     "RevitQuickAccess.Commands.FlexPipeCommand")
                 {

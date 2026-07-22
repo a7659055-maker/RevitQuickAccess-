@@ -24,3 +24,9 @@ pending_reports/
 RevitQuickAccess.dll.new
 update.pending
 tools/.wrangler/
+
+# Пресеты публикуются намеренно: это те же файлы, но пропущенные через
+# tools/publish-config.ps1, который вычищает из них личный URL приёмника отчётов.
+# Правила выше глушат их по имени — здесь возвращаем обратно.
+!presets/**/icons/
+!presets/**

@@ -1,0 +1,13 @@
+# RevitQuickAccess bind sets. Section: [Имя]|КлавишаАктивации, then combo<Tab>command lines.
+# enabled=0
+# active=0
+
+[По умолчанию]
+J	CustomCtrl_%CustomCtrl_%CustomCtrl_%ModPlus%Системы%mprMEPConnect%mprFittingConnect
+H	CustomCtrl_%CustomCtrl_%CustomCtrl_%ModPlus%Системы%mprMEPRotate%mprMEPRotateElements
+O*2	ID_OBJECTS_WINDOW
+Oem3	__TOGGLE__
+P	ID_OBJECTS_FLOOR_RibbonListButton
+W	ID_OBJECTS_DETAIL_CURVES ; SketchGalleryItem_IDC_RADIO_LINE
+M	ID_EDIT_SCALE
+

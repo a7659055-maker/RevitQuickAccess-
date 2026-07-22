@@ -1,0 +1,5 @@
+# RevitQuickAccess quick commands: name<Tab>command<Tab>iconFile<Tab>width<Tab>height
+Разъединить коннекторы	CustomCtrl_%CustomCtrl_%CustomCtrl_%ModPlus%Системы%mprMEPConnect%mprDisconnect		81.60000000000002	174.4841094970703
+Стена: архитектурная	ID_OBJECTS_WALL	ic_35cbec57e531.png	93.03233001400073	172.41051368713374
+Соединить коннекторы	CustomCtrl_%CustomCtrl_%CustomCtrl_%ModPlus%Системы%mprMEPConnect%mprFittingConnect		99.2000000000001	180.25337883843224
+Пол/Перекрытие	ID_OBJECTS_FLOOR_RibbonListButton	ic_0047eeb01c76.png	139.2	101.28936320125848

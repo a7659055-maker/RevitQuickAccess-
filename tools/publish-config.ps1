@@ -30,10 +30,16 @@ foreach ($f in $files) {
     else { Write-Host "  - $f (нет)" -ForegroundColor DarkGray }
 }
 
-# в настройках может лежать личный URL приёмника отчётов — вычищаем
+# В настройках лежит личный URL приёмника отчётов — он не должен попасть в публичный репозиторий.
+# Пишем через -Value: если после фильтра не осталось ни строки, пайплайн пустой и Set-Content
+# вообще не вызывается — файл остался бы с секретом.
 $s = Join-Path $dest "RevitQuickAccess_settings.txt"
 if (Test-Path $s) {
-    (Get-Content $s) | Where-Object { $_ -notmatch '^\s*reportEndpoint\s*=' } | Set-Content $s
+    $kept = @(Get-Content $s | Where-Object { $_ -notmatch '^\s*reportEndpoint\s*=' })
+    Set-Content -Path $s -Value $kept
+    $left = @(Get-Content $s -ErrorAction SilentlyContinue | Where-Object { $_ -match 'reportEndpoint' })
+    if ($left.Count -gt 0) { throw "reportEndpoint не вычистился из $s — публиковать нельзя" }
+    Write-Host "  · reportEndpoint вычищен из настроек" -ForegroundColor DarkGray
 }
 
 # иконки плиток, чтобы пресет выглядел как надо
