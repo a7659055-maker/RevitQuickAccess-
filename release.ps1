@@ -70,10 +70,18 @@ Write-Host "[4/5] Push" -ForegroundColor Cyan
 git -C $root push origin HEAD --tags
 
 Write-Host "[5/5] Релиз на GitHub" -ForegroundColor Cyan
-if (Get-Command gh -ErrorAction SilentlyContinue) {
+# gh может быть не в PATH текущей сессии (например сразу после установки) — ищем и по обычному пути
+$gh = (Get-Command gh -ErrorAction SilentlyContinue)?.Source
+if (-not $gh) {
+    foreach ($p in @("$env:ProgramFiles\GitHub CLI\gh.exe", "${env:ProgramFiles(x86)}\GitHub CLI\gh.exe",
+                     "$env:LOCALAPPDATA\Programs\GitHub CLI\gh.exe")) {
+        if (Test-Path $p) { $gh = $p; break }
+    }
+}
+if ($gh) {
     $ghArgs = @("release", "create", "v$new", $dll, $exe, "--title", "v$new")
     if ($Notes) { $ghArgs += @("--notes", $Notes) } else { $ghArgs += "--generate-notes" }
-    gh @ghArgs
+    & $gh @ghArgs
     Write-Host "Готово. Обновление разъедется пользователям при следующем запуске Revit." -ForegroundColor Green
 } else {
     Write-Host "GitHub CLI (gh) не установлен — создай релиз v$new вручную и приложи:" -ForegroundColor Yellow
