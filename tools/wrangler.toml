@@ -1,0 +1,7 @@
+name = "rqa-report"
+main = "report-worker.js"
+compatibility_date = "2024-11-01"
+
+# Секреты (TELEGRAM_TOKEN, TELEGRAM_CHAT_ID) сюда НЕ пишутся — они задаются командой
+# `npx wrangler secret put ...` и хранятся на стороне Cloudflare.
+# Разворачивать:  .\deploy-worker.ps1

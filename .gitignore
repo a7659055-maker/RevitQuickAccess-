@@ -21,3 +21,5 @@ icons/
 reports/
 pending_reports/
 *.old_*
+RevitQuickAccess.dll.new
+update.pending

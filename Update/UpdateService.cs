@@ -66,21 +66,54 @@ namespace RevitQuickAccess.Update
             byte[] data = await http.GetByteArrayAsync(dllUrl);
             if (data == null || data.Length < 1024) { Log("скачанный файл подозрительно мал — пропуск"); return; }
 
-            Stage(data);
-            Log($"обновлено {current} → {latest}");
-            ToastNotifier.Show($"Обновление {latest} загружено — применится после перезапуска Revit", true);
+            StagePending(data, latest);
+            Log($"скачано {current} → {latest}, установится при закрытии Revit");
+            ToastNotifier.ShowCorner($"Revit Quick Access {latest} загружена — установится после закрытия Revit", 3000);
         }
 
-        /// <summary>Put the new DLL in place of the running one (rename-aside trick).</summary>
-        private static void Stage(byte[] dll)
+        /// <summary>Park the downloaded DLL next to the current one; it is swapped in on shutdown.</summary>
+        private static void StagePending(byte[] dll, Version version)
         {
             string dir = BaseDir();
-            string target = Path.Combine(dir, AssetName);
+            File.WriteAllBytes(Path.Combine(dir, AssetName + ".new"), dll);
+            File.WriteAllText(Path.Combine(dir, "update.pending"), version.ToString());
+        }
 
-            foreach (var f in SafeFiles(dir, "*.old_*")) { try { File.Delete(f); } catch { } }
+        /// <summary>
+        /// Called when Revit shuts down: swap the staged DLL in. The file is still loaded, so it can't
+        /// be overwritten — but on Windows it can be renamed, so the old one is moved aside.
+        /// </summary>
+        public static void ApplyPending()
+        {
+            try
+            {
+                string dir = BaseDir();
+                string staged = Path.Combine(dir, AssetName + ".new");
+                if (!File.Exists(staged)) return;
 
-            try { if (File.Exists(target)) File.Move(target, target + ".old_" + DateTime.Now.Ticks); } catch { }
-            File.WriteAllBytes(target, dll);
+                string target = Path.Combine(dir, AssetName);
+                foreach (var f in SafeFiles(dir, "*.old_*")) { try { File.Delete(f); } catch { } }
+
+                try { if (File.Exists(target)) File.Move(target, target + ".old_" + DateTime.Now.Ticks); } catch { }
+                File.Move(staged, target);
+
+                string marker = Path.Combine(dir, "update.pending");
+                string ver = File.Exists(marker) ? File.ReadAllText(marker).Trim() : "?";
+                try { File.Delete(marker); } catch { }
+                Log($"установлена версия {ver}");
+            }
+            catch (Exception ex) { Log("не удалось применить обновление: " + ex.Message); }
+        }
+
+        /// <summary>Version staged and waiting for shutdown, or null.</summary>
+        public static string PendingVersion()
+        {
+            try
+            {
+                string marker = Path.Combine(BaseDir(), "update.pending");
+                return File.Exists(marker) ? File.ReadAllText(marker).Trim() : null;
+            }
+            catch { return null; }
         }
 
         private static Version ParseVersion(string tag)

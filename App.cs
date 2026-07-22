@@ -157,6 +157,8 @@ namespace RevitQuickAccess
             try { KeyInterceptor.Uninstall(); } catch { }
             try { RibbonRecorder.Uninstall(); } catch { }
             try { CrashGuard.MarkSessionClean(); } catch { }
+            // install the update that was downloaded during this session
+            try { Update.UpdateService.ApplyPending(); } catch { }
             return Result.Succeeded;
         }
 

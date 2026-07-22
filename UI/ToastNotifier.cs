@@ -30,10 +30,18 @@ namespace RevitQuickAccess.UI
             var d = _dispatcher;
             if (d == null) return;
             // marshal off the keyboard-hook call stack
-            d.BeginInvoke(new Action(() => ShowCore(message, positive)), DispatcherPriority.Normal);
+            d.BeginInvoke(new Action(() => ShowCore(message, positive, false, 1100)), DispatcherPriority.Normal);
         }
 
-        private static void ShowCore(string message, bool positive)
+        /// <summary>Windows-style notification in the bottom-right corner of the screen.</summary>
+        public static void ShowCorner(string message, int milliseconds = 3000)
+        {
+            var d = _dispatcher;
+            if (d == null) return;
+            d.BeginInvoke(new Action(() => ShowCore(message, true, true, milliseconds)), DispatcherPriority.Normal);
+        }
+
+        private static void ShowCore(string message, bool positive, bool corner, int ms)
         {
             try
             {
@@ -45,13 +53,32 @@ namespace RevitQuickAccess.UI
 
                 _win.Opacity = 1;
                 _win.Show();
+                _win.UpdateLayout();
 
-                GetCursorPos(out POINT p);
                 var hwnd = new WindowInteropHelper(_win).Handle;
-                SetWindowPos(hwnd, HWND_TOPMOST, p.X + 16, p.Y + 20, 0, 0,
+                int x, y;
+
+                if (corner)
+                {
+                    // bottom-right of the work area, like a Windows notification
+                    GetWindowRect(hwnd, out RECT wr);
+                    int w = wr.Right - wr.Left, h = wr.Bottom - wr.Top;
+                    var work = new RECT();
+                    if (!SystemParametersInfo(SPI_GETWORKAREA, 0, ref work, 0))
+                    { work.Right = 1920; work.Bottom = 1080; }
+                    x = work.Right - w - 16;
+                    y = work.Bottom - h - 16;
+                }
+                else
+                {
+                    GetCursorPos(out POINT p);
+                    x = p.X + 16; y = p.Y + 20;
+                }
+
+                SetWindowPos(hwnd, HWND_TOPMOST, x, y, 0, 0,
                     SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-                RestartTimer();
+                RestartTimer(ms);
             }
             catch { }
         }
@@ -94,10 +121,10 @@ namespace RevitQuickAccess.UI
             };
         }
 
-        private static void RestartTimer()
+        private static void RestartTimer(int ms)
         {
             _timer?.Stop();
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1100) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
             _timer.Tick += (s, e) =>
             {
                 _timer.Stop();
@@ -115,8 +142,13 @@ namespace RevitQuickAccess.UI
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         private const uint SWP_NOSIZE = 0x0001, SWP_NOACTIVATE = 0x0010, SWP_SHOWWINDOW = 0x0040;
 
+        private const uint SPI_GETWORKAREA = 0x0030;
+
         [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
+        [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
         [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT lpPoint);
+        [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [DllImport("user32.dll")] private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref RECT pvParam, uint fWinIni);
         [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
         [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
         [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);

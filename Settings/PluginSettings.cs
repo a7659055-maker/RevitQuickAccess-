@@ -13,7 +13,7 @@ namespace RevitQuickAccess.Settings
     public static class UpdateDefaults
     {
         /// <summary>GitHub repository the plugin updates itself from ("owner/repo").</summary>
-        public const string Repo = "";           // TODO: set to "<github-login>/RevitQuickAccess"
+        public const string Repo = "a7659055-maker/RevitQuickAccess-";
 
         /// <summary>Public relay endpoint that receives bug reports (Cloudflare Worker URL).</summary>
         public const string ReportEndpoint = ""; // TODO: set to the deployed Worker URL
