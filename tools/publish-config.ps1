@@ -42,10 +42,15 @@ if (Test-Path $s) {
     Write-Host "  · reportEndpoint вычищен из настроек" -ForegroundColor DarkGray
 }
 
-# иконки плиток, чтобы пресет выглядел как надо
+# Иконки плиток, чтобы пресет выглядел как надо.
+# Копируем содержимое, а не саму папку: Copy-Item по имени папки при повторном
+# запуске (когда назначение уже есть) вкладывает её внутрь — получалось icons/icons.
 $icons = Join-Path $live "icons"
 if (Test-Path $icons) {
-    Copy-Item $icons (Join-Path $dest "icons") -Recurse -Force
+    $iconsDest = Join-Path $dest "icons"
+    if (Test-Path $iconsDest) { Remove-Item $iconsDest -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $iconsDest | Out-Null
+    Copy-Item (Join-Path $icons "*") -Destination $iconsDest -Recurse -Force
     Write-Host "  + icons/"
 }
 
