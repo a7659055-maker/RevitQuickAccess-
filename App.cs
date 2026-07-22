@@ -144,6 +144,9 @@ namespace RevitQuickAccess
                     ToastNotifier.Show(on ? "Бинды включены" : "Бинды выключены", on);
                 KeyInterceptor.SetSwitched += name => ToastNotifier.Show("Набор: " + name, true);
 
+                // ExternalEvent for the "__MOVE:" bind action (model edits need API context)
+                NudgeService.Init();
+
                 // Key interceptor (runs on this UI thread)
                 KeyInterceptor.Install();
 

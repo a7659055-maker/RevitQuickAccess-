@@ -10,8 +10,9 @@ namespace RevitQuickAccess.Binds
     /// Turns a stored command string into an actual Revit action.
     ///
     /// A step is resolved, in order, as:
-    ///   1. a raw Revit command id  ("ID_OBJECTS_WALL", "ID_BUTTON_COPY", ...)
-    ///   2. a PostableCommand enum name ("WallByFace", "Copy", ...)
+    ///   1. an internal action ("__MOVE:dx,dy,dz__" — see NudgeService)
+    ///   2. a raw Revit command id  ("ID_OBJECTS_WALL", "ID_BUTTON_COPY", ...)
+    ///   3. a PostableCommand enum name ("WallByFace", "Copy", ...)
     ///
     /// Single command → posted immediately. Macro (steps joined by " ; ") → driven by Revit's Idling
     /// event (which fires reliably even while an interactive tool is up, unlike a WPF timer). Each next
@@ -96,6 +97,10 @@ namespace RevitQuickAccess.Binds
         {
             var uiapp = App.UiApp;
             if (uiapp == null) return;
+
+            // internal action, not a Revit command — runs through its own ExternalEvent
+            if (NudgeService.IsMoveStep(step)) { NudgeService.Request(step); return; }
+
             RevitCommandId id = Resolve(step);
             if (id == null) return;
             try { uiapp.PostCommand(id); }
