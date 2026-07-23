@@ -523,13 +523,14 @@
 
                         <Grid Grid.Row="3">
                         <DataGrid x:Name="dgBrowser" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  HeadersVisibility="Column" RowHeaderWidth="0" SelectionMode="Single"
+                                  HeadersVisibility="Column" RowHeaderWidth="0" SelectionMode="Extended"
                                   Background="White" BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"
                                   GridLinesVisibility="All" HorizontalGridLinesBrush="{StaticResource BorderLight}"
                                   VerticalGridLinesBrush="{StaticResource BorderLight}" RowBackground="White" FontSize="11"
                                   CanUserSortColumns="True" Sorting="DgBrowser_Sorting"
                                   CurrentCellChanged="DgBrowser_CurrentCellChanged"
                                   SelectionChanged="DgBrowser_SelectionChanged"
+                                  BeginningEdit="DgBrowser_BeginningEdit" CellEditEnding="DgBrowser_CellEditEnding"
                                   AllowDrop="True" PreviewMouseMove="DgBrowser_PreviewMouseMove" Drop="DgBrowser_Drop"
                                   PreviewMouseRightButtonDown="DgBrowser_RightClick">
                             <DataGrid.ContextMenu>

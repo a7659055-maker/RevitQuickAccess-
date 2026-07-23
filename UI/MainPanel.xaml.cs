@@ -1018,43 +1018,66 @@ namespace RevitQuickAccess.UI
         }
 
         private Point _rowDragStart;
-        private BrowserRow _rowDragItem;
+        private List<BrowserRow> _rowDragItems;
+        private bool _browserEditing;
+
+        // A cell in edit mode owns the mouse for text selection — while editing, no row reorder.
+        private void DgBrowser_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+        {
+            _browserEditing = true;
+            _rowDragItems = null;
+        }
+
+        private void DgBrowser_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e) => _browserEditing = false;
 
         private void DgBrowser_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (chkAutoNumber.IsChecked != true) return;             // drag only in auto-numbering mode
-            if (e.LeftButton != MouseButtonState.Pressed) { _rowDragItem = null; return; }
+            if (_browserEditing) { _rowDragItems = null; return; }   // editing text — never start a reorder
+            if (e.LeftButton != MouseButtonState.Pressed) { _rowDragItems = null; return; }
             if (_filling || Mouse.Captured is Thumb) return;
+            if (IsInsideEditor(e.OriginalSource as DependencyObject)) { _rowDragItems = null; return; }
 
             var pos = e.GetPosition(dgBrowser);
-            if (_rowDragItem == null)
+            if (_rowDragItems == null)
             {
-                _rowDragItem = RowAt(pos);
+                var row = RowAt(pos);
+                if (row == null) return;
                 _rowDragStart = pos;
+                // if the pressed row is part of a multi-selection, drag the whole block; else just it
+                var sel = dgBrowser.SelectedItems.OfType<BrowserRow>().ToList();
+                _rowDragItems = sel.Count > 1 && sel.Contains(row)
+                    ? sel.OrderBy(r => BrowserManager.Rows.IndexOf(r)).ToList()
+                    : new List<BrowserRow> { row };
                 return;
             }
             if (Math.Abs(pos.Y - _rowDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
 
-            var item = _rowDragItem;
-            _rowDragItem = null;
-            if (item != null) DragDrop.DoDragDrop(dgBrowser, item, DragDropEffects.Move);
+            var items = _rowDragItems;
+            _rowDragItems = null;
+            if (items != null && items.Count > 0)
+                DragDrop.DoDragDrop(dgBrowser, items, DragDropEffects.Move);
         }
 
         private void DgBrowser_Drop(object sender, DragEventArgs e)
         {
             if (chkAutoNumber.IsChecked != true) return;
-            if (!(e.Data.GetData(typeof(BrowserRow)) is BrowserRow dragged)) return;
+            if (!(e.Data.GetData(typeof(List<BrowserRow>)) is List<BrowserRow> dragged) || dragged.Count == 0) return;
 
             var target = RowAt(e.GetPosition(dgBrowser));
-            if (target == null || ReferenceEquals(target, dragged)) return;
+            if (target == null || dragged.Contains(target)) return;
 
-            int from = BrowserManager.Rows.IndexOf(dragged);
-            int to = BrowserManager.Rows.IndexOf(target);
-            if (from < 0 || to < 0) return;
+            // keep the moved rows in their current relative order, drop the block just before the target
+            var block = dragged.OrderBy(r => BrowserManager.Rows.IndexOf(r)).ToList();
+            foreach (var r in block) BrowserManager.Rows.Remove(r);
 
-            BrowserManager.Rows.Move(from, to);
+            int at = BrowserManager.Rows.IndexOf(target);
+            if (at < 0) at = BrowserManager.Rows.Count;
+            for (int i = 0; i < block.Count; i++) BrowserManager.Rows.Insert(at + i, block[i]);
+
             RenumberSheets();
-            dgBrowser.SelectedItem = dragged;
+            dgBrowser.SelectedItems.Clear();
+            foreach (var r in block) dgBrowser.SelectedItems.Add(r);
         }
 
         private BrowserRow RowAt(Point p)
@@ -1062,6 +1085,17 @@ namespace RevitQuickAccess.UI
             var hit = dgBrowser.InputHitTest(p) as DependencyObject;
             while (hit != null && !(hit is DataGridRow)) hit = VisualTreeHelper.GetParent(hit);
             return (hit as DataGridRow)?.Item as BrowserRow;
+        }
+
+        /// <summary>True if the event came from inside a cell's text editor (so a drag is text selection).</summary>
+        private static bool IsInsideEditor(DependencyObject d)
+        {
+            while (d != null)
+            {
+                if (d is System.Windows.Controls.TextBox) return true;
+                d = VisualTreeHelper.GetParent(d);
+            }
+            return false;
         }
 
         private void CtxDelete_Click(object sender, RoutedEventArgs e)
