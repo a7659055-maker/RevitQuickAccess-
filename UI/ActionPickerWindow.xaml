@@ -1,0 +1,83 @@
+<Window x:Class="RevitQuickAccess.UI.ActionPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Действия Revit" Width="480" Height="560"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanResize"
+        Background="#FFF8F9FA" FontFamily="Segoe UI" FontSize="13" Foreground="#FF2E3136">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Amber" Color="#FFC6811E"/>
+        <SolidColorBrush x:Key="AmberHover" Color="#FFD8912A"/>
+        <SolidColorBrush x:Key="LightBg" Color="#FFF5F6F7"/>
+        <SolidColorBrush x:Key="LightHover" Color="#FFE5E8EB"/>
+        <SolidColorBrush x:Key="BorderMid" Color="#FFA7ABB0"/>
+        <SolidColorBrush x:Key="TextMid" Color="#FF696D72"/>
+
+        <Style x:Key="FlatBtn" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource LightBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMid}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,7"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource LightHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Foreground="{StaticResource TextMid}" FontSize="12" Margin="0,0,0,8"
+                   Text="Действия, которых нет на ленте — из контекстного меню (скрыть элемент/категорию, переопределить графику) и панели вида (показать скрытые). Выбери и назначь клавишу. Действие выполняется над выделенным объектом."/>
+
+        <TextBox x:Name="txtSearch" Grid.Row="1" Margin="0,0,0,8" Padding="7,6"
+                 BorderBrush="{StaticResource BorderMid}" BorderThickness="1"
+                 TextChanged="Search_Changed" ToolTip="Поиск по названию"/>
+
+        <ListBox x:Name="list" Grid.Row="2" BorderBrush="{StaticResource BorderMid}" BorderThickness="1"
+                 MouseDoubleClick="List_DoubleClick">
+            <ListBox.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11"
+                                       Foreground="{StaticResource Amber}" Margin="4,8,0,3"/>
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </ListBox.GroupStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Label}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Token}" Foreground="{StaticResource TextMid}"
+                                   FontFamily="Consolas" FontSize="10" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Style="{StaticResource FlatBtn}" Content="Отмена" Click="Cancel_Click"/>
+            <Button Style="{StaticResource FlatBtn}" Content="Выбрать" Margin="8,0,0,0" Click="Ok_Click"
+                    Background="{StaticResource Amber}" BorderBrush="{StaticResource Amber}" Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>

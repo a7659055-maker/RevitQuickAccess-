@@ -431,6 +431,22 @@ namespace RevitQuickAccess.UI
             _tapUnit = null; _tapCount = 0;
         }
 
+        // --- action picker: bind commands that aren't on the ribbon (hide, override, reveal…) ---
+
+        private void BtnPickAction_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new ActionPickerWindow { Owner = Window.GetWindow(this) };
+            if (dlg.ShowDialog() != true || dlg.Selected == null) return;
+
+            var a = dlg.Selected;
+            tbCommand.Text = a.Token;
+            // give «В БЫСТРЫЕ» a readable Russian label instead of the raw command token
+            _lastBindCmdId = a.Token;
+            _lastBindCmdLabel = a.Label;
+            _lastBindCmdIcon = null;
+            ShowStatus($"Действие: {a.Label}. Теперь запиши клавишу и «ДОБАВИТЬ».", false);
+        }
+
         // --- command recording (binds tab) — same mechanic as quick tab ---
 
         private void BtnRecordCmd_Click(object sender, RoutedEventArgs e)
