@@ -133,44 +133,26 @@ namespace RevitQuickAccess.Binds
                 return true;
             }
 
-            // 4. dispatch (chord → single → multi-tap)
-            if (!string.IsNullOrEmpty(chordCombo))
+            // 4. dispatch — a pressed chord wins over the single key it ends on; both support multi-tap
+            string effective = !string.IsNullOrEmpty(chordCombo) ? chordCombo : combo;
+
+            // multi-tap (E*2, A+S*2, …): accumulate taps and let the timer resolve them
+            if (BindsManager.HasMultiTapVariant(effective))
             {
-                foreach (var b in binds)
-                {
-                    if (string.Equals(b.Command, BindsManager.ToggleCommand, StringComparison.OrdinalIgnoreCase)) continue;
-                    string nc = BindsManager.NormalizeForMatch(b.KeyCombo);
-                    if (BindsManager.IsChordFormat(nc) && BindsManager.MatchChord(chordCombo, nc))
-                    {
-                        FlushPending();
-                        CommandExecutor.Execute(b.Command);
-                        return true;
-                    }
-                }
+                var now = DateTime.UtcNow;
+                bool continuation = string.Equals(_pendingCombo, effective, StringComparison.OrdinalIgnoreCase)
+                                    && (now - _lastTapTime).TotalMilliseconds < BindsManager.DoubleTapMs;
+                if (continuation) _pendingCount++;
+                else { FlushPending(); _pendingCombo = effective; _pendingCount = 1; }
+                _lastTapTime = now;
+                RestartTimer();
+                return true;
             }
 
-            KeyBindEntry singleBind = binds.FirstOrDefault(b =>
-                !string.Equals(b.Command, BindsManager.ToggleCommand, StringComparison.OrdinalIgnoreCase) &&
-                !BindsManager.IsMultiTapFormat(BindsManager.NormalizeForMatch(b.KeyCombo)) &&
-                !BindsManager.IsChordFormat(BindsManager.NormalizeForMatch(b.KeyCombo)) &&
-                BindsManager.MatchCombo(combo, b.KeyCombo));
-
-            bool hasMulti = BindsManager.HasMultiTapVariant(combo);
-
-            if (!hasMulti)
-            {
-                if (singleBind != null) { FlushPending(); CommandExecutor.Execute(singleBind.Command); return true; }
-                return false;
-            }
-
-            var now = DateTime.UtcNow;
-            bool continuation = string.Equals(_pendingCombo, combo, StringComparison.OrdinalIgnoreCase)
-                                && (now - _lastTapTime).TotalMilliseconds < BindsManager.DoubleTapMs;
-            if (continuation) _pendingCount++;
-            else { FlushPending(); _pendingCombo = combo; _pendingCount = 1; }
-            _lastTapTime = now;
-            RestartTimer();
-            return true;
+            // no multi-tap variant → fire the exact match right away (chord first, then single)
+            var exact = BindsManager.GetExactBind(effective);
+            if (exact != null) { FlushPending(); CommandExecutor.Execute(exact.Command); return true; }
+            return false;
         }
 
         /// <summary>True if the pressed combo/chord matches any (non-toggle) bind's key.</summary>
@@ -181,15 +163,13 @@ namespace RevitQuickAccess.Binds
                 if (string.Equals(b.Command, BindsManager.ToggleCommand, StringComparison.OrdinalIgnoreCase)) continue;
                 string nc = BindsManager.NormalizeForMatch(b.KeyCombo);
                 if (string.IsNullOrEmpty(nc)) continue;
-                if (BindsManager.IsChordFormat(nc))
+                // strip a "*N" multi-tap suffix first, then decide chord vs single on the base
+                string bas = BindsManager.IsMultiTapFormat(nc) ? BindsManager.GetMultiTapBase(nc) : nc;
+                if (BindsManager.IsChordFormat(bas))
                 {
-                    if (!string.IsNullOrEmpty(chordCombo) && BindsManager.MatchChord(chordCombo, nc)) return true;
+                    if (!string.IsNullOrEmpty(chordCombo) && BindsManager.MatchChord(chordCombo, bas)) return true;
                 }
-                else
-                {
-                    string bas = BindsManager.IsMultiTapFormat(nc) ? BindsManager.GetMultiTapBase(nc) : nc;
-                    if (BindsManager.MatchCombo(combo, bas)) return true;
-                }
+                else if (BindsManager.MatchCombo(combo, bas)) return true;
             }
             return false;
         }
@@ -263,13 +243,9 @@ namespace RevitQuickAccess.Binds
             if (mt != null) { CommandExecutor.Execute(mt.Command); return; }
             if (count == 1)
             {
-                var binds = BindsManager.Snapshot();
-                var single = binds.FirstOrDefault(b =>
-                    !string.Equals(b.Command, BindsManager.ToggleCommand, StringComparison.OrdinalIgnoreCase) &&
-                    !BindsManager.IsMultiTapFormat(BindsManager.NormalizeForMatch(b.KeyCombo)) &&
-                    !BindsManager.IsChordFormat(BindsManager.NormalizeForMatch(b.KeyCombo)) &&
-                    BindsManager.MatchCombo(combo, b.KeyCombo));
-                if (single != null) CommandExecutor.Execute(single.Command);
+                // a single tap of a combo that also has a multi-tap variant → the plain bind (key or chord)
+                var exact = BindsManager.GetExactBind(combo);
+                if (exact != null) CommandExecutor.Execute(exact.Command);
             }
         }
 

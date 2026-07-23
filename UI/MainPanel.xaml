@@ -213,7 +213,7 @@
                                 <TextBlock Grid.Column="0" Text="Активация:" VerticalAlignment="Center" FontSize="11"
                                            Foreground="{StaticResource TextMid}" Margin="0,0,6,0"/>
                                 <TextBox x:Name="tbSetKey" Grid.Column="1" Style="{StaticResource InputBox}"
-                                         PreviewKeyDown="KeyBox_PreviewKeyDown"
+                                         PreviewKeyDown="KeyBox_PreviewKeyDown" PreviewKeyUp="KeyBox_PreviewKeyUp"
                                          ToolTip="Клавиша, которая переключает НА этот набор (напр. Ctrl+1)"/>
                                 <Button Grid.Column="2" Style="{StaticResource AmberBtn}" Content="Запись" Margin="6,0,0,0"
                                         Click="BtnRecordSetKey_Click"/>
@@ -291,7 +291,7 @@
                                     <TextBlock Grid.Column="0" Text="Клавиша" VerticalAlignment="Center" FontWeight="SemiBold"
                                                FontSize="11" Foreground="{StaticResource TextMid}"/>
                                     <TextBox x:Name="tbKey" Grid.Column="1" Style="{StaticResource InputBox}"
-                                             PreviewKeyDown="KeyBox_PreviewKeyDown"/>
+                                             PreviewKeyDown="KeyBox_PreviewKeyDown" PreviewKeyUp="KeyBox_PreviewKeyUp"/>
                                     <Button x:Name="btnRecordKey" Grid.Column="2" Style="{StaticResource AmberBtn}" Margin="6,0,0,0"
                                             Click="BtnRecordKey_Click"
                                             ToolTip="Записать сочетание клавиш: нажми, затем нажми нужные клавиши (можно Ctrl/Shift, аккорд или мультитап)">

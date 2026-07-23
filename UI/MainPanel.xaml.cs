@@ -29,9 +29,13 @@ namespace RevitQuickAccess.UI
         private bool _syncingCheckbox;
         private bool _syncingSets;
 
-        // key recording (binds tab)
+        // key recording (binds tab) — detects repeated taps so "E*2" / "A+S*2" are written automatically
         private bool _recordingKey;
-        private readonly List<int> _recordedVks = new List<int>();
+        private readonly List<int> _heldVks = new List<int>();   // non-modifier keys currently down
+        private readonly List<int> _tapVks = new List<int>();    // keys gathered in the tap in progress
+        private List<int> _tapUnit;                              // sorted keys of the first completed tap
+        private int _tapCount;                                   // how many times that unit was tapped
+        private ModifierKeys _tapMods;                           // modifiers held for the taps
         private DispatcherTimer _recordTimer;
 
         // ribbon recording (shared)
@@ -335,12 +339,16 @@ namespace RevitQuickAccess.UI
         {
             _keyBox = box;
             box.Text = "нажми клавиши…";
-            _recordedVks.Clear();
+            _heldVks.Clear(); _tapVks.Clear();
+            _tapUnit = null; _tapCount = 0; _tapMods = ModifierKeys.None;
             _recordingKey = true;
             KeyInterceptor.Suspended = true;
             box.Focus();
         }
 
+        // A "tap" = keys pressed together, then all released. Tapping the same key/chord again bumps
+        // the multi-tap count, so "E" pressed twice records as "E*2" and "A+S" twice as "A+S*2" —
+        // the user never types the *N tag by hand.
         private void KeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (!_recordingKey) return;
@@ -348,32 +356,62 @@ namespace RevitQuickAccess.UI
             var box = sender as TextBox ?? _keyBox;
             Key key = e.Key == Key.System ? e.SystemKey : e.Key;
             if (key == Key.Escape) { CancelKeyRecording(); if (box != null) box.Text = ""; return; }
-            if (IsModifier(key)) { if (box != null) box.Text = BuildCombo(); return; }
+
+            _recordTimer?.Stop();   // a key is down — don't finish while the user is still pressing
+            if (IsModifier(key)) { _tapMods = Keyboard.Modifiers; if (box != null) box.Text = Preview(); return; }
+
             int vk = KeyInterop.VirtualKeyFromKey(key);
-            if (vk != 0 && !_recordedVks.Contains(vk)) _recordedVks.Add(vk);
-            if (box != null) box.Text = BuildCombo();
-            RestartRecordTimer();
+            if (vk == 0) return;
+            if (_heldVks.Count == 0) { _tapVks.Clear(); _tapMods = Keyboard.Modifiers; }  // start of a new tap
+            if (!_heldVks.Contains(vk)) _heldVks.Add(vk);
+            if (!_tapVks.Contains(vk)) _tapVks.Add(vk);
+            if (box != null) box.Text = Preview();
+        }
+
+        private void KeyBox_PreviewKeyUp(object sender, KeyEventArgs e)
+        {
+            if (!_recordingKey) return;
+            e.Handled = true;
+            Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (IsModifier(key)) return;
+
+            int vk = KeyInterop.VirtualKeyFromKey(key);
+            _heldVks.Remove(vk);
+            if (_heldVks.Count > 0) return;          // still holding part of the chord — tap not done yet
+
+            // tap complete: compare its key set with the first tap's
+            var unit = new List<int>(_tapVks); unit.Sort();
+            if (unit.Count == 0) return;
+            if (_tapUnit == null || !unit.SequenceEqual(_tapUnit)) { _tapUnit = unit; _tapCount = 1; }
+            else _tapCount++;
+
+            if (_keyBox != null) _keyBox.Text = Preview();
+            RestartRecordTimer();                    // finish shortly unless another identical tap follows
         }
 
         private static bool IsModifier(Key k) =>
             k is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.System;
 
-        private string BuildCombo()
+        /// <summary>Live text for the box: modifiers + keys, plus "*N" once the same tap repeats.</summary>
+        private string Preview()
         {
+            var keys = _tapUnit ?? new List<int>(_tapVks);
+            keys = new List<int>(keys); keys.Sort();
+
             var parts = new List<string>();
-            var mods = Keyboard.Modifiers;
-            if ((mods & ModifierKeys.Control) != 0) parts.Add("Ctrl");
-            if ((mods & ModifierKeys.Shift) != 0) parts.Add("Shift");
-            if ((mods & ModifierKeys.Alt) != 0) parts.Add("Alt");
-            var keys = new List<int>(_recordedVks); keys.Sort();
+            if ((_tapMods & ModifierKeys.Control) != 0) parts.Add("Ctrl");
+            if ((_tapMods & ModifierKeys.Shift) != 0) parts.Add("Shift");
+            if ((_tapMods & ModifierKeys.Alt) != 0) parts.Add("Alt");
             foreach (var vk in keys) parts.Add(((WinForms.Keys)vk).ToString());
-            return string.Join("+", parts);
+
+            string combo = string.Join("+", parts);
+            return _tapCount >= 2 ? combo + "*" + _tapCount : combo;
         }
 
         private void RestartRecordTimer()
         {
             _recordTimer?.Stop();
-            _recordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _recordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
             _recordTimer.Tick += (s, e) => FinishKeyRecording();
             _recordTimer.Start();
         }
@@ -382,13 +420,15 @@ namespace RevitQuickAccess.UI
         {
             _recordTimer?.Stop(); _recordTimer = null;
             _recordingKey = false; KeyInterceptor.Suspended = false;
+            if (_keyBox != null && _tapUnit != null) _keyBox.Text = Preview();   // freeze the final combo
         }
 
         private void CancelKeyRecording()
         {
             _recordTimer?.Stop(); _recordTimer = null;
             _recordingKey = false; KeyInterceptor.Suspended = false;
-            _recordedVks.Clear();
+            _heldVks.Clear(); _tapVks.Clear();
+            _tapUnit = null; _tapCount = 0;
         }
 
         // --- command recording (binds tab) — same mechanic as quick tab ---

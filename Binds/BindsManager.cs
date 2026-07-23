@@ -421,14 +421,20 @@ namespace RevitQuickAccess.Binds
             return a.Count == b.Count && a.SequenceEqual(b);
         }
 
-        public static bool HasMultiTapVariant(string singleCombo)
+        /// <summary>Order-independent key of a combo, so "A+S" and "S+A" compare equal (chords).</summary>
+        public static string Canon(string combo) =>
+            string.Join("+", NormalizeForMatch(combo).Split('+')
+                .Select(x => x.ToUpperInvariant()).OrderBy(x => x, StringComparer.Ordinal));
+
+        public static bool HasMultiTapVariant(string combo)
         {
+            string key = Canon(combo);
             lock (_lock)
             {
                 foreach (var b in _binds)
                 {
                     string nc = NormalizeForMatch(b.KeyCombo);
-                    if (IsMultiTapFormat(nc) && string.Equals(GetMultiTapBase(nc), singleCombo, StringComparison.OrdinalIgnoreCase))
+                    if (IsMultiTapFormat(nc) && Canon(GetMultiTapBase(nc)) == key)
                         return true;
                 }
             }
@@ -437,14 +443,31 @@ namespace RevitQuickAccess.Binds
 
         public static KeyBindEntry GetMultiTapBindForCount(string baseCombo, int tapCount)
         {
+            string key = Canon(baseCombo);
             lock (_lock)
             {
                 foreach (var b in _binds)
                 {
                     string nc = NormalizeForMatch(b.KeyCombo);
-                    if (IsMultiTapFormat(nc) && GetMultiTapCount(nc) == tapCount
-                        && string.Equals(GetMultiTapBase(nc), baseCombo, StringComparison.OrdinalIgnoreCase))
+                    if (IsMultiTapFormat(nc) && GetMultiTapCount(nc) == tapCount && Canon(GetMultiTapBase(nc)) == key)
                         return b.Clone();
+                }
+            }
+            return null;
+        }
+
+        /// <summary>Non-multitap bind (single key or chord) exactly matching the pressed combo.</summary>
+        public static KeyBindEntry GetExactBind(string combo)
+        {
+            lock (_lock)
+            {
+                foreach (var b in _binds)
+                {
+                    if (string.Equals(b.Command, ToggleCommand, StringComparison.OrdinalIgnoreCase)) continue;
+                    string nc = NormalizeForMatch(b.KeyCombo);
+                    if (IsMultiTapFormat(nc)) continue;
+                    bool ok = IsChordFormat(nc) ? MatchChord(combo, nc) : MatchCombo(combo, nc);
+                    if (ok) return b.Clone();
                 }
             }
             return null;
