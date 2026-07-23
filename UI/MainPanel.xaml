@@ -576,7 +576,7 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ТИП" Binding="{Binding Kind}" IsReadOnly="True" Width="66" SortMemberPath="Kind"/>
+                                <DataGridTextColumn Header="ТИП" Binding="{Binding Kind}" IsReadOnly="True" Width="112" SortMemberPath="Kind"/>
                                 <DataGridTextColumn x:Name="colName" Header="ИМЯ" Width="*" SortMemberPath="Name"
                                                     Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
                                 <DataGridTextColumn x:Name="colSheetNo" Header="№ ЛИСТА" Width="78" SortMemberPath="SheetNumber"

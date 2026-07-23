@@ -28,6 +28,9 @@ namespace RevitQuickAccess.Browser
 
         public string Kind { get; set; } = "";
 
+        /// <summary>Category grouping order for the ТИП column (views): plans, elevations, sections, …</summary>
+        public int KindRank { get; set; } = 100;
+
         /// <summary>Title block type actually placed on this sheet (empty for views / sheets without one).</summary>
         public long TitleBlockId { get; set; } = -1;
         public string TitleBlockName { get; set; } = "";

@@ -792,9 +792,13 @@ namespace RevitQuickAccess.UI
 
             rows.Sort((a, b) =>
             {
-                if (a.IsSheet != b.IsSheet) return a.IsSheet ? -1 : 1;   // sheets first, always
+                // sheets first, then views stay grouped by category (План/Фасад/Разрез/Спецификация…)
+                int ra = BrowserService.KindRank(a), rb = BrowserService.KindRank(b);
+                if (ra != rb) return ra.CompareTo(rb);
+                // the chosen column sorts within each category; ties fall back to the name
                 string va = Field(a, field), vb = Field(b, field);
-                return sign * NaturalComparer.Instance.Compare(va, vb);
+                int c = sign * NaturalComparer.Instance.Compare(va, vb);
+                return c != 0 ? c : NaturalComparer.Instance.Compare(a.Name, b.Name);
             });
 
             BrowserManager.Rows.Clear();

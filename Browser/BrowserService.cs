@@ -56,6 +56,41 @@ namespace RevitQuickAccess.Browser
             ViewType.DrawingSheet, ViewType.Undefined
         };
 
+        // Human category for the ТИП column + the order categories are grouped in (sheets rank 0).
+        // Views used to all read "Вид"; now planes, elevations, sections, schedules, … are separate.
+        private static readonly (ViewType type, int rank, string name)[] Kinds =
+        {
+            (ViewType.FloorPlan,      10, "План этажа"),
+            (ViewType.CeilingPlan,    11, "План потолка"),
+            (ViewType.EngineeringPlan,12, "Инж. план"),
+            (ViewType.AreaPlan,       13, "План площади"),
+            (ViewType.Elevation,      20, "Фасад"),
+            (ViewType.Section,        30, "Разрез"),
+            (ViewType.Detail,         40, "Узел"),
+            (ViewType.ThreeD,         50, "3D"),
+            (ViewType.Walkthrough,    51, "Обход"),
+            (ViewType.Rendering,      52, "Тонирование"),
+            (ViewType.DraftingView,   60, "Чертёжный вид"),
+            (ViewType.Legend,         70, "Легенда"),
+            (ViewType.Schedule,       80, "Спецификация"),
+            (ViewType.PanelSchedule,  81, "Ведом. панелей"),
+            (ViewType.ColumnSchedule, 82, "Ведом. колонн"),
+            (ViewType.Report,         90, "Отчёт"),
+            (ViewType.CostReport,     91, "Отчёт (смета)"),
+            (ViewType.LoadsReport,    92, "Отчёт (нагрузки)"),
+            (ViewType.PresureLossReport, 93, "Отчёт (потери)"),
+            (ViewType.SystemsAnalysisReport, 94, "Отчёт (анализ)"),
+        };
+
+        private static (int rank, string name) KindOf(ViewType t)
+        {
+            foreach (var k in Kinds) if (k.type == t) return (k.rank, k.name);
+            return (100, "Вид");
+        }
+
+        /// <summary>Grouping order for the ТИП column: sheets first (0), then views by category.</summary>
+        public static int KindRank(BrowserRow r) => r.IsSheet ? 0 : r.KindRank;
+
         // ---- load ----
 
         public static List<BrowserRow> Load(Document doc, string groupParam)
@@ -95,9 +130,11 @@ namespace RevitQuickAccess.Browser
             foreach (var v in new FilteredElementCollector(doc).OfClass(typeof(View)).Cast<View>())
             {
                 if (v is ViewSheet || v.IsTemplate || Excluded.Contains(v.ViewType)) continue;
+                var (rank, name) = KindOf(v.ViewType);
                 views.Add(Snapshot(new BrowserRow
                 {
-                    Kind = "Вид",
+                    Kind = name,
+                    KindRank = rank,
                     IsSheet = false,
                     Id = v.Id.Value,
                     Name = v.Name,
@@ -107,7 +144,14 @@ namespace RevitQuickAccess.Browser
             }
 
             sheets.Sort((x, y) => NaturalComparer.Instance.Compare(x.SheetNumber, y.SheetNumber));
-            views.Sort((x, y) => NaturalComparer.Instance.Compare(x.Name, y.Name));
+            // group views by category, then natural order by name within each category
+            views.Sort((x, y) =>
+            {
+                int r = x.KindRank.CompareTo(y.KindRank);
+                if (r != 0) return r;
+                int k = NaturalComparer.Instance.Compare(x.Kind, y.Kind);
+                return k != 0 ? k : NaturalComparer.Instance.Compare(x.Name, y.Name);
+            });
 
             var all = new List<BrowserRow>(sheets.Count + views.Count);
             all.AddRange(sheets);
