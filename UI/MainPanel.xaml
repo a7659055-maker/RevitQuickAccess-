@@ -311,7 +311,7 @@
                                     <TextBox x:Name="tbCommand" Grid.Column="1" Style="{StaticResource InputBox}"/>
                                     <Button x:Name="btnPickAction" Grid.Column="2" Style="{StaticResource LightBtn}" Margin="6,0,0,0"
                                             Content="Действия ▾" Click="BtnPickAction_Click"
-                                            ToolTip="Выбрать действие Revit, которое не нажимается на ленте: скрыть элемент/категорию, показать скрытые, переопределить графику, правка и т.д."/>
+                                            ToolTip="Выбрать ЛЮБУЮ команду Revit, которой нет на ленте: контекстное меню (скрыть/переопределить), панель вида (показать скрытые), диспетчер проекта и т.д. Полный список берётся из сочетаний клавиш Revit."/>
                                     <Button x:Name="btnRecordCmd" Grid.Column="3" Style="{StaticResource AmberBtn}" Margin="6,0,0,0"
                                             Click="BtnRecordCmd_Click"
                                             ToolTip="Записать команду: нажми, затем кликни кнопку(и) на ленте Revit. С «цепочкой» — несколько кликов в макрос, потом нажми СТОП.">

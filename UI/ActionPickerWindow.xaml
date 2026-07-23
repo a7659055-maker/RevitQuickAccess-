@@ -43,14 +43,21 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" TextWrapping="Wrap" Foreground="{StaticResource TextMid}" FontSize="12" Margin="0,0,0,8"
-                   Text="Действия, которых нет на ленте — из контекстного меню (скрыть элемент/категорию, переопределить графику) и панели вида (показать скрытые). Выбери и назначь клавишу. Действие выполняется над выделенным объектом."/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock x:Name="lblHeader" TextWrapping="Wrap" Foreground="{StaticResource TextMid}" FontSize="12"/>
+            <Button x:Name="btnFullList" Content="Загрузить ПОЛНЫЙ список команд Revit →" Margin="0,6,0,0"
+                    HorizontalAlignment="Left" Cursor="Hand" Click="FullList_Click"
+                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource Amber}" FontWeight="SemiBold"
+                    ToolTip="Открыть окно «Сочетания клавиш» Revit — Revit создаст полный список всех команд (меню, контекст, диспетчер проекта). Потом снова открой «Действия»."/>
+        </StackPanel>
 
         <TextBox x:Name="txtSearch" Grid.Row="1" Margin="0,0,0,8" Padding="7,6"
                  BorderBrush="{StaticResource BorderMid}" BorderThickness="1"
-                 TextChanged="Search_Changed" ToolTip="Поиск по названию"/>
+                 TextChanged="Search_Changed" ToolTip="Поиск по названию или по ID команды"/>
 
         <ListBox x:Name="list" Grid.Row="2" BorderBrush="{StaticResource BorderMid}" BorderThickness="1"
+                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.IsVirtualizingWhenGrouping="True" ScrollViewer.CanContentScroll="True"
                  MouseDoubleClick="List_DoubleClick">
             <ListBox.GroupStyle>
                 <GroupStyle>

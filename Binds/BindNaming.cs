@@ -38,6 +38,10 @@ namespace RevitQuickAccess.Binds
             }
             catch { }
 
+            // a command id picked from the full Revit catalog → its localized name
+            var catalog = RevitCommandCatalog.NameOf(step);
+            if (!string.IsNullOrWhiteSpace(catalog)) return catalog;
+
             return Clean(step);
         }
 

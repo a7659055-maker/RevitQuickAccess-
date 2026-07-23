@@ -436,7 +436,18 @@ namespace RevitQuickAccess.UI
         private void BtnPickAction_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new ActionPickerWindow { Owner = Window.GetWindow(this) };
-            if (dlg.ShowDialog() != true || dlg.Selected == null) return;
+            bool ok = dlg.ShowDialog() == true;
+
+            // user asked for the full catalog → open Revit's Keyboard Shortcuts dialog so it writes the file
+            if (dlg.RequestOpenShortcuts)
+            {
+                CommandExecutor.Execute("KeyboardShortcuts");
+                ShowStatus("Открыл «Сочетания клавиш» Revit. Назначь любому пункту любую клавишу и нажми ОК — " +
+                           "Revit сохранит полный список. Потом снова открой «Действия».", false);
+                return;
+            }
+
+            if (!ok || dlg.Selected == null) return;
 
             var a = dlg.Selected;
             tbCommand.Text = a.Token;
