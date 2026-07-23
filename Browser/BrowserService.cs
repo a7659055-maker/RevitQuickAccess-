@@ -252,21 +252,40 @@ namespace RevitQuickAccess.Browser
                 // 3) renames / renumbers / groups — two passes to dodge unique-name collisions
                 var changed = rows.Where(r => !r.IsNew && !r.ToDelete && HasEdits(r)).ToList();
 
-                int tmp = 0;
+                // Pass A: park every element whose UNIQUE field is changing (sheet number, view name)
+                // to a temporary value, so the real numbers/names are all vacated before anyone claims
+                // them — this is what lets two sheets swap 6↔7 without "Sheet number is already in use".
+                //
+                // The temp MUST use only characters Revit allows in a sheet number — the previous
+                // "~RQA…" was silently invalid ('~', like \ : { } [ ] | ; < > ? `, is a prohibited
+                // sheet-number character), so every park threw, was swallowed, and nothing was parked
+                // at all; then pass B collided on every swap. "RQATMP" is plain letters + digits.
+                //
+                // Building it from the element's own ElementId makes it unique three ways at once:
+                // no two elements ever get the same temp, it never clashes with a real number, and a
+                // leftover "RQATMP<id>" from an interrupted apply belongs to that very element (so
+                // re-parking it is a harmless no-op).
                 foreach (var row in changed)          // pass A: park the values that must stay unique
                 {
                     var el = doc.GetElement(new ElementId(row.Id));
                     if (el == null) continue;
-                    string park = "~RQA" + (++tmp);
+                    string park = "RQATMP" + row.Id;
                     try
                     {
-                        if (el is ViewSheet vs && row.SheetNumber != row.OrigNumber && !string.IsNullOrWhiteSpace(row.SheetNumber))
+                        if (el is ViewSheet vs && SheetNumberChanging(row))
                             vs.SheetNumber = park;
-                        else if (!(el is ViewSheet) && el is View v && row.Name != row.OrigName && !string.IsNullOrWhiteSpace(row.Name))
+                        else if (!(el is ViewSheet) && el is View v && NameChanging(row))
                             v.Name = park;
                     }
-                    catch { /* parking is best-effort */ }
+                    catch (Exception ex)
+                    {
+                        // parking really shouldn't fail with an id-based temp; if it somehow does,
+                        // record it so the row isn't silently left half-applied
+                        row.Error = ex.Message;
+                    }
                 }
+
+                try { doc.Regenerate(); } catch { }   // make the vacated numbers/names visible to pass B
 
                 foreach (var row in changed)          // pass B: set the finals
                 {
@@ -276,12 +295,10 @@ namespace RevitQuickAccess.Browser
                     {
                         if (el is ViewSheet vs)
                         {
-                            if (row.SheetNumber != row.OrigNumber && !string.IsNullOrWhiteSpace(row.SheetNumber))
-                                vs.SheetNumber = row.SheetNumber;
-                            if (row.Name != row.OrigName && !string.IsNullOrWhiteSpace(row.Name))
-                                vs.Name = row.Name;
+                            if (SheetNumberChanging(row)) vs.SheetNumber = row.SheetNumber;
+                            if (NameChanging(row)) vs.Name = row.Name;
                         }
-                        else if (el is View v && row.Name != row.OrigName && !string.IsNullOrWhiteSpace(row.Name))
+                        else if (el is View v && NameChanging(row))
                         {
                             v.Name = row.Name;
                         }
@@ -319,6 +336,12 @@ namespace RevitQuickAccess.Browser
 
         private static bool HasEdits(BrowserRow r) =>
             r.Name != r.OrigName || r.SheetNumber != r.OrigNumber || r.Group != r.OrigGroup;
+
+        private static bool SheetNumberChanging(BrowserRow r) =>
+            r.SheetNumber != r.OrigNumber && !string.IsNullOrWhiteSpace(r.SheetNumber);
+
+        private static bool NameChanging(BrowserRow r) =>
+            r.Name != r.OrigName && !string.IsNullOrWhiteSpace(r.Name);
 
         private static void Restore(Element el, BrowserRow row)
         {
