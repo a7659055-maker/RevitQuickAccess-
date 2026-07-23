@@ -12,8 +12,20 @@ namespace RqaInstaller
                 string.Equals(a, "--uninstall", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(a, "/uninstall", StringComparison.OrdinalIgnoreCase));
 
-            var win = new MainWindow(uninstall);
+            // set by an older installer that just self-updated and launched this newer one
+            string updatedFrom = ArgValue(e.Args, "--updated-from");
+            string replacePath = ArgValue(e.Args, "--replace");
+
+            var win = new MainWindow(uninstall, updatedFrom, replacePath);
             win.Show();
+        }
+
+        private static string ArgValue(string[] args, string key)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+                if (string.Equals(args[i], key, StringComparison.OrdinalIgnoreCase))
+                    return args[i + 1];
+            return null;
         }
     }
 }

@@ -97,6 +97,12 @@
 
         <!-- body -->
         <StackPanel Grid.Row="1" Margin="24,18,24,18">
+            <!-- self-update banner (post-update success, or "checking / outdated") -->
+            <Border x:Name="updateBanner" Visibility="Collapsed" Margin="0,0,0,14" Padding="12,9"
+                    Background="#FFE9F3EC" BorderBrush="#FF3B9D63" BorderThickness="4,1,1,1">
+                <TextBlock x:Name="lblUpdateBanner" TextWrapping="Wrap" Foreground="#FF2E7D4F" FontSize="12"/>
+            </Border>
+
             <!-- auto-playing preview slideshow (hidden when no screenshots are embedded) -->
             <Border x:Name="shotPanel" Visibility="Collapsed" Margin="0,0,0,16"
                     BorderBrush="{StaticResource BorderMid}" BorderThickness="1" Background="#FF23282F">

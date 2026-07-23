@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Threading;
+using RevitQuickAccess.UI;
 using WinForms = System.Windows.Forms;
 
 namespace RevitQuickAccess.Binds
@@ -151,7 +152,7 @@ namespace RevitQuickAccess.Binds
 
             // no multi-tap variant → fire the exact match right away (chord first, then single)
             var exact = BindsManager.GetExactBind(effective);
-            if (exact != null) { FlushPending(); CommandExecutor.Execute(exact.Command); return true; }
+            if (exact != null) { FlushPending(); Fire(exact.Command); return true; }
             return false;
         }
 
@@ -240,13 +241,20 @@ namespace RevitQuickAccess.Binds
             if (combo == null || count <= 0) return;
 
             var mt = BindsManager.GetMultiTapBindForCount(combo, count);
-            if (mt != null) { CommandExecutor.Execute(mt.Command); return; }
+            if (mt != null) { Fire(mt.Command); return; }
             if (count == 1)
             {
                 // a single tap of a combo that also has a multi-tap variant → the plain bind (key or chord)
                 var exact = BindsManager.GetExactBind(combo);
-                if (exact != null) CommandExecutor.Execute(exact.Command);
+                if (exact != null) Fire(exact.Command);
             }
+        }
+
+        /// <summary>Run a bind's command and flash a 1-second tooltip naming it under the cursor.</summary>
+        private static void Fire(string command)
+        {
+            try { ToastNotifier.ShowBind(BindNaming.Describe(command)); } catch { }
+            CommandExecutor.Execute(command);
         }
 
         // ---- combo formatting (WinForms.Keys names for BINDS10 config compatibility) ----

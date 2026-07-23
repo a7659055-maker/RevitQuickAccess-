@@ -2,7 +2,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -12,6 +15,10 @@ namespace RqaInstaller
     public partial class MainWindow : Window
     {
         private const string ProductName = "Revit Quick Access";
+
+        // the public repo the installer self-updates from (same one the plugin uses)
+        private const string Repo = "a7659055-maker/RevitQuickAccess-";
+        private const string SetupAssetName = "RevitQuickAccess-Setup.exe";
 
         private static string ProductVersion
         {
@@ -34,13 +41,19 @@ namespace RqaInstaller
 
         private bool _busy;
 
-        public MainWindow(bool uninstallMode)
+        public MainWindow(bool uninstallMode, string updatedFrom = null, string replacePath = null)
         {
             InitializeComponent();
             lblPath.Text = TargetDir;
             lblVersion.Text = "ВЕРСИЯ " + ProductVersion;
             RefreshState();
             LoadSlideshow();
+
+            // We were launched by an older installer that just self-updated: finish the swap
+            // (copy ourselves over its file) and report the version jump.
+            if (!string.IsNullOrEmpty(replacePath)) TryReplaceOld(replacePath);
+            if (!string.IsNullOrEmpty(updatedFrom))
+                ShowBanner($"✓ Установщик обновлён с версии {updatedFrom} до {ProductVersion}.");
 
             if (uninstallMode)
             {
@@ -50,6 +63,124 @@ namespace RqaInstaller
                         await DoUninstall();
                 };
             }
+            else if (string.IsNullOrEmpty(updatedFrom))
+            {
+                // fresh launch → check the installer itself is the latest before doing anything
+                Loaded += async (s, e) => await CheckSelfUpdateAsync();
+            }
+        }
+
+        // ---- installer self-update ----
+
+        private void ShowBanner(string text)
+        {
+            lblUpdateBanner.Text = text;
+            updateBanner.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>On startup: if a newer installer is published, offer to fetch and relaunch it.</summary>
+        private async Task CheckSelfUpdateAsync()
+        {
+            try
+            {
+                var (latest, tag, url) = await FetchLatestAsync();
+                if (latest == null || string.IsNullOrEmpty(url)) return;
+
+                if (!Version.TryParse(ProductVersion, out var cur)) return;
+                if (latest <= cur) return;   // already current — nothing to do
+
+                var ans = MessageBox.Show(this,
+                    $"Версия установщика неактуальна.\n\nСейчас: {ProductVersion}\nАктуальная: {tag}\n\n" +
+                    "Скачать и запустить актуальную версию?",
+                    ProductName + " — обновление установщика",
+                    MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (ans != MessageBoxResult.Yes) return;
+
+                await DownloadAndRelaunch(url, latest);
+            }
+            catch
+            {
+                // offline / GitHub unreachable / anything → just keep running the current installer
+            }
+        }
+
+        private static async Task<(Version version, string tag, string url)> FetchLatestAsync()
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("RevitQuickAccess-Installer");
+
+            string json = await http.GetStringAsync($"https://api.github.com/repos/{Repo}/releases/latest");
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            string tag = root.TryGetProperty("tag_name", out var t) ? t.GetString() ?? "" : "";
+            if (!Version.TryParse(tag.TrimStart('v', 'V'), out var version)) return (null, tag, null);
+
+            string url = null;
+            if (root.TryGetProperty("assets", out var assets))
+                foreach (var a in assets.EnumerateArray())
+                    if (a.TryGetProperty("name", out var n) &&
+                        string.Equals(n.GetString(), SetupAssetName, StringComparison.OrdinalIgnoreCase) &&
+                        a.TryGetProperty("browser_download_url", out var u))
+                        url = u.GetString();
+
+            return (version, tag, url);
+        }
+
+        private async Task DownloadAndRelaunch(string url, Version latest)
+        {
+            _busy = true;
+            btnInstall.IsEnabled = btnUninstall.IsEnabled = false;
+            lblStatus.Text = "Скачиваю актуальный установщик…";
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("RevitQuickAccess-Installer");
+            byte[] data = await http.GetByteArrayAsync(url);
+            if (data == null || data.Length < 100_000)   // our setup exe is ~700 KB; smaller = something's off
+            {
+                _busy = false; RefreshState();
+                MessageBox.Show(this, "Не удалось скачать актуальную версию.", ProductName,
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string newExe = Path.Combine(Path.GetTempPath(), $"RevitQuickAccess-Setup-{latest}.exe");
+            File.WriteAllBytes(newExe, data);
+
+            string self = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+            var psi = new ProcessStartInfo(newExe)
+            {
+                UseShellExecute = true,
+                Arguments = $"--updated-from {ProductVersion} --replace \"{self}\""
+            };
+            Process.Start(psi);
+            Close();   // OnClosed → Environment.Exit(0)
+        }
+
+        /// <summary>Best-effort: put the freshly-downloaded installer back where the old one lived.</summary>
+        private static void TryReplaceOld(string oldPath)
+        {
+            try
+            {
+                string self = Process.GetCurrentProcess().MainModule?.FileName;
+                if (string.IsNullOrEmpty(self) || string.IsNullOrEmpty(oldPath) ||
+                    string.Equals(self, oldPath, StringComparison.OrdinalIgnoreCase)) return;
+
+                for (int i = 0; i < 10 && IsLocked(oldPath); i++) Thread.Sleep(150);  // wait for the old one to exit
+                File.Copy(self, oldPath, true);
+            }
+            catch { }
+        }
+
+        private static bool IsLocked(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return false;
+                using var _ = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                return false;
+            }
+            catch { return true; }
         }
 
         // Guarantee the process actually exits when the window closes (no lingering background process).

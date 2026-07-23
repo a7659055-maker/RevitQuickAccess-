@@ -25,31 +25,34 @@ namespace RevitQuickAccess.UI
         /// <summary>Call once from the UI thread (App.OnStartup) to capture the dispatcher.</summary>
         public static void Init() => _dispatcher = Dispatcher.CurrentDispatcher;
 
-        public static void Show(string message, bool positive)
+        // Post at the highest priority (or run inline if already on the UI thread) so the toast
+        // appears immediately under the cursor — the old Normal-priority BeginInvoke lagged behind
+        // Revit's work, so it popped late and at a stale cursor position.
+        private static void Post(Action a)
         {
             var d = _dispatcher;
             if (d == null) return;
-            // marshal off the keyboard-hook call stack
-            d.BeginInvoke(new Action(() => ShowCore(message, positive, false, 1100)), DispatcherPriority.Normal);
+            if (d.CheckAccess()) a();
+            else d.BeginInvoke(a, DispatcherPriority.Send);
         }
+
+        public static void Show(string message, bool positive) =>
+            Post(() => ShowCore(message, false, 1100));
+
+        /// <summary>Tiny 1-second tooltip at the cursor naming the bind that just fired.</summary>
+        public static void ShowBind(string message) =>
+            Post(() => ShowCore(message, false, 1000));
 
         /// <summary>Windows-style notification in the bottom-right corner of the screen.</summary>
-        public static void ShowCorner(string message, int milliseconds = 3000)
-        {
-            var d = _dispatcher;
-            if (d == null) return;
-            d.BeginInvoke(new Action(() => ShowCore(message, true, true, milliseconds)), DispatcherPriority.Normal);
-        }
+        public static void ShowCorner(string message, int milliseconds = 3000) =>
+            Post(() => ShowCore(message, true, milliseconds));
 
-        private static void ShowCore(string message, bool positive, bool corner, int ms)
+        private static void ShowCore(string message, bool corner, int ms)
         {
             try
             {
                 EnsureWindow();
                 _text.Text = message;
-                _border.Background = new SolidColorBrush(positive
-                    ? Color.FromRgb(0x2E, 0x8B, 0x57)    // green
-                    : Color.FromRgb(0xC2, 0x44, 0x36));  // red
 
                 _win.Opacity = 1;
                 _win.Show();
@@ -86,17 +89,20 @@ namespace RevitQuickAccess.UI
         private static void EnsureWindow()
         {
             if (_win != null) return;
+            // classic Windows tooltip: pale-yellow box, thin grey border, black text, sharp corners
             _text = new TextBlock
             {
-                Foreground = Brushes.White,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E)),
                 FontFamily = new FontFamily("Segoe UI"),
-                FontWeight = FontWeights.SemiBold,
                 FontSize = 12
             };
             _border = new Border
             {
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(12, 7, 12, 7),
+                Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xE1)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x76, 0x76, 0x76)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(0),
+                Padding = new Thickness(6, 3, 6, 3),
                 Child = _text
             };
             _win = new Window
